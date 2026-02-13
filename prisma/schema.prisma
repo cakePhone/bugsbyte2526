@@ -1,0 +1,80 @@
+// Geisha Gains - Brutalist Crypto Trading Simulator
+// Coffee Driven Development - BugsByte 2026
+// Prisma Schema for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  preferences Json?    // JSONB for theme, notifications, risk tolerance
+  riskProfile Json?    // JSONB: { risk_tolerance, investment_horizon, focus_sectors, geopolitical_sensitivity }
+  onboarded   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  wallet      Wallet?
+  transactions Transaction[]
+  
+  @@map("users")
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balanceUsdt  Float    @default(10000.0) // Starting balance
+  assets       Json     @default("{}") // JSONB: { "BTC": 0.5, "ETH": 2.0 }
+  totalPnL     Float    @default(0.0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("wallets")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  symbol      String   // BTC, ETH, XRP
+  type        TradeType
+  amount      Float    // Quantity traded
+  price       Float    // Execution price
+  totalValue  Float    // amount * price
+  pnl         Float?   // Profit/Loss for this trade
+  isOverdrive Boolean  @default(false) // Was this executed during Caffeine Overdrive?
+  confidence  Int?     // AI confidence score (0-100)
+  reasoning   String?  // AI reasoning
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, timestamp])
+  @@index([symbol])
+  @@map("transactions")
+}
+
+model MarketSnap {
+  id        String   @id @default(cuid())
+  symbol    String   // BTC, ETH, XRP
+  price     Float
+  volume24h Float?
+  change24h Float?
+  source    String   @default("uphold") // uphold, mock, etc.
+  timestamp DateTime @default(now())
+  
+  @@index([symbol, timestamp])
+  @@map("market_snaps")
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
