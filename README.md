@@ -17,7 +17,7 @@
 
 **🎯 A production-ready AI-powered crypto trading simulator that successfully demonstrated NVIDIA NIM integration at BugsByte 2026!**
 
-[🌐 View Live Demo](https://geisha-gains.vercel.app/) • [🐛 Report Bug](https://github.com/YOUR_USERNAME/geisha-gains/issues) • [✨ Request Feature](https://github.com/YOUR_USERNAME/geisha-gains/issues)
+[🌐 View Live Demo](https://geisha-gains.vercel.app/) • [🐛 Report Bug](https://github.com/YOUR_USERNAME/geisha-gains/issues) • [✨ Request Feature](https://github.com/YOUR_USERNAME/geisha-gains/issues) • [🎨 Design Assets](DESIGN_PROMPT.md)
 
 </div>
 
@@ -192,6 +192,7 @@ geisha-gains/
 ├── package.json                      # Dependencies & scripts
 ├── postcss.config.js                 # PostCSS configuration
 ├── tailwind.config.js                # Tailwind CSS configuration
+├── DESIGN_PROMPT.md                  # Banner & logo design specifications
 ├── SETUP_GUIDE.md                    # Detailed setup instructions
 └── README.md                         # You are here! 📍
 ```
@@ -219,6 +220,49 @@ geisha-gains/
 - **ThreatRadar**: 4-axis SVG radar (Volatility, Geopolitics, Sentiment, Exposure)
 - **ActionOverlay**: Fixed-position lethal alerts with QUICK SELL buttons
 - **News Analysis API**: Returns global_score, portfolio_threat, sentiment, action, reasoning
+
+---
+
+## 🎨 Design Assets
+
+This project includes comprehensive design specifications for branding and visual assets:
+
+### 📁 Available Files
+
+- **[DESIGN_PROMPT.md](DESIGN_PROMPT.md)** — Complete brutalist design specifications for banner and logo creation
+
+### 🖼️ Brand Guidelines
+
+**Color Palette:**
+- Background: #121212 (Rich Black)
+- Primary Text: #FFFFFF (Pure White)
+- Borders: #FFFFFF (White)
+- Accents: #FF0000 (Pure Red)
+
+**Typography:**
+- Primary Font: JetBrains Mono (Monospace)
+- Design Style: Minimalistic Brutalism
+- No gradients, shadows, or rounded corners
+
+### 🏯 Logo & Banner Assets
+
+**Logo Variations:**
+- Square icon version with temple motif
+- Horizontal banner version with coffee branding
+- Monospace typography with thick borders
+
+**Banner Designs:**
+- Main banner (1920x600px) with threat radar preview
+- Compact header banner (1200x300px) for navigation
+
+**Usage:**
+- Website headers and navigation
+- Social media profiles and posts
+- Presentation slides and demos
+- Hackathon booth materials
+
+**Generation:**
+Use the detailed prompt in `DESIGN_PROMPT.md` with AI image generators (DALL-E, Midjourney) or design tools to create consistent branding assets.
 
 ---
 
