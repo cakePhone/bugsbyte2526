@@ -54,6 +54,40 @@ If you're a recruiter or collaborator, feel free to reach out:
 
 ---
 
+## 📋 Project Description
+
+**Geisha Gains — War Room** is a brutalist crypto trading simulator that combines AI-powered market intelligence with a military command center aesthetic. Built for the BugsByte 2026 Hackathon, this full-stack application demonstrates advanced integration of NVIDIA NIM's Llama-3 70B model for real-time news analysis.
+
+### Core Concept
+A dark-themed trading simulator where users undergo "The Interrogation" — a terminal-style onboarding that profiles their trading psychology across risk tolerance, time horizons, sector preferences, and market sensitivity. This creates a personalized intelligence loop that continuously analyzes news against the user's profile.
+
+### Intelligence Loop System
+- **User Profiling**: Terminal-style questionnaire capturing trading psychology
+- **News Ingestion**: Real-time crypto news from CryptoPanic API with robust fallbacks
+- **AI Analysis**: NVIDIA NIM processes articles for sentiment, impact, and trading signals
+- **Threat Assessment**: 4-axis radar visualization of market risks
+- **Action Alerts**: Lethal overlays with QUICK SELL recommendations for high-threat scenarios
+
+### Technical Architecture
+Built with Next.js 14.2.5 App Router and TypeScript, featuring:
+- **Frontend**: React components with Framer Motion animations
+- **Backend**: API routes handling NVIDIA NIM integration
+- **Database**: Prisma ORM with PostgreSQL/SQLite support
+- **Styling**: Tailwind CSS with custom brutalist theme (#121212 bg, #FFFFFF text, #FF0000 accents)
+- **Fonts**: JetBrains Mono monospace for industrial terminal aesthetic
+
+### Key Features
+- War Room dashboard with multi-panel intelligence display
+- Real-time news feed with threat-colored borders (red for SELL signals)
+- Pulsing threat radar that activates on high-risk news
+- Fixed-position action overlays for immediate trading decisions
+- Coffee-driven development branding with subtle ☕ motifs
+
+### Hackathon Achievements
+Successfully demonstrated production-ready NVIDIA NIM integration, complete user profiling system, and responsive brutalist UI. The application runs stably with proper error handling, environment security, and scalable architecture suitable for real trading applications.
+
+---
+
 ## 🧠 Features
 
 - 🏯 **Brutalist Design** — Dark theme with red accents and monospace fonts
