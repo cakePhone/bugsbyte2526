@@ -26,9 +26,9 @@
 
 <div align="center">
 
-<img width="200" height="200" alt="Geisha Gains Logo" src="assets/gglogo.png" />
+<img width="200" height="200" alt="Geisha Gains Logo" src="public/assets/gglogo.png" />
 
-<img width="1270" height="300" alt="Geisha Gains Banner" src="assets/ggbanner.png" />
+<img width="1270" height="300" alt="Geisha Gains Banner" src="public/assets/ggbanner.png" />
 
 *🏯 Geisha Gains — War Room Dashboard*
 
@@ -277,7 +277,7 @@ This project includes comprehensive design specifications for branding and visua
 
 <div align="center">
 
-<img width="200" height="200" alt="Geisha Gains Logo" src="assets/gglogo.png" />
+<img width="200" height="200" alt="Geisha Gains Logo" src="public/assets/gglogo.png" />
 
 </div>
 
@@ -287,7 +287,7 @@ This project includes comprehensive design specifications for branding and visua
 
 <div align="center">
 
-<img width="800" height="200" alt="Geisha Gains Banner" src="assets/ggbanner.png" />
+<img width="800" height="200" alt="Geisha Gains Banner" src="public/assets/ggbanner.png" />
 
 </div>
 
