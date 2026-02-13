@@ -17,7 +17,7 @@
 
 **🎯 A production-ready AI-powered crypto trading simulator that successfully demonstrated NVIDIA NIM integration at BugsByte 2026!**
 
-[🌐 View Live Demo](https://geisha-gains.vercel.app/) • [🐛 Report Bug](https://github.com/solmane/geisha-gains/issues) • [✨ Request Feature](https://github.com/solmane/geisha-gains/issues)
+[🌐 View Live Demo](https://geisha-gains.vercel.app/) • [🐛 Report Bug](https://github.com/YOUR_USERNAME/geisha-gains/issues) • [✨ Request Feature](https://github.com/YOUR_USERNAME/geisha-gains/issues)
 
 </div>
 
@@ -38,15 +38,15 @@
 
 <div align="center">
 
-**Hi, I'm Solmane** — a Full-Stack Developer specializing in AI-powered applications and real-time systems.
+**Hi, I'm a Full-Stack Developer** specializing in AI-powered applications and real-time systems.
 
 This crypto trading simulator was built for **BugsByte 2026 Hackathon**, featuring a complete intelligence loop with NVIDIA NIM AI integration, demonstrating advanced news analysis and risk profiling capabilities.
 
 If you're a recruiter or collaborator, feel free to reach out:
 
-[![Portfolio](https://img.shields.io/badge/Portfolio-solmane.github.io-000000?style=for-the-badge&logo=github&logoColor=white)](https://solmane.github.io)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Solmane-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/solmane)
-[![GitHub](https://img.shields.io/badge/GitHub-solmane-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/solmane)
+[![Portfolio](https://img.shields.io/badge/Portfolio-Coming_Soon-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Coming_Soon-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com)
+[![GitHub](https://img.shields.io/badge/GitHub-Coming_Soon-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com)
 
 </div>
 
@@ -99,7 +99,7 @@ Make sure you have the following installed:
 
 ```bash
 # 1️⃣ Clone the repository
-git clone https://github.com/solmane/geisha-gains.git
+git clone https://github.com/YOUR_USERNAME/geisha-gains.git
 
 # 2️⃣ Navigate to the project directory
 cd geisha-gains
@@ -302,8 +302,8 @@ If you found this project helpful or inspiring, please consider giving it a ⭐!
 
 Your support helps the project grow and motivates continued development.
 
-[![Star this repo](https://img.shields.io/badge/⭐_Star_This_Repo-yellow?style=for-the-badge&logo=github)](https://github.com/solmane/geisha-gains)
-[![Fork this repo](https://img.shields.io/badge/🍴_Fork_This_Repo-blue?style=for-the-badge&logo=github)](https://github.com/solmane/geisha-gains/fork)
+[![Star this repo](https://img.shields.io/badge/⭐_Star_This_Repo-yellow?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/geisha-gains)
+[![Fork this repo](https://img.shields.io/badge/🍴_Fork_This_Repo-blue?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/geisha-gains/fork)
 
 **Every star counts! Thank you for your support! 🙏**
 
@@ -318,7 +318,7 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 ```
 MIT License
 
-Copyright (c) 2026 Solmane
+Copyright (c) 2026 Geisha Gains
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
