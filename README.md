@@ -26,7 +26,9 @@
 
 <div align="center">
 
-<img width="1270" height="669" alt="geisha gains war room" src="https://github.com/user-attachments/assets/geisha-gains-dashboard.png" />
+<img width="200" height="200" alt="Geisha Gains Logo" src="assets/gglogo.png" />
+
+<img width="1270" height="300" alt="Geisha Gains Banner" src="assets/ggbanner.png" />
 
 *🏯 Geisha Gains — War Room Dashboard*
 
@@ -109,7 +111,8 @@ npm install
 
 # 4️⃣ Set up environment variables
 cp .env.example .env
-# Edit .env with your NVIDIA API key and database URL
+# ⚠️  SECURITY: Never commit .env to version control!
+# Edit .env with your actual API keys and credentials
 
 # 5️⃣ Initialize database
 npm run db:generate
@@ -123,7 +126,15 @@ npm run dev
 
 ### Environment Variables
 
-Create a `.env` file with:
+**🔒 Security Warning:** Never commit your `.env` file to version control! It contains sensitive API keys and credentials.
+
+Create a `.env` file by copying the template:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with your actual values:
 
 ```env
 # Database (SQLite for quick start, PostgreSQL for production)
@@ -131,8 +142,12 @@ DATABASE_URL="file:./dev.db"
 
 # NVIDIA NIM API (required for AI analysis)
 NVIDIA_NIM_ENDPOINT="https://integrate.api.nvidia.com/v1/chat/completions"
-NVIDIA_API_KEY="nvapi-YOUR-KEY-HERE"
+NVIDIA_API_KEY="nvapi-YOUR-ACTUAL-KEY-HERE"
 ```
+
+**Required Keys:**
+- `NVIDIA_API_KEY`: Get from [NVIDIA Build](https://build.nvidia.com/)
+- `DATABASE_URL`: PostgreSQL connection string or `file:./dev.db` for SQLite
 
 ### Build for Production
 
@@ -185,7 +200,16 @@ geisha-gains/
 │   └── schema.prisma                 # Database schema
 ├── 📁 public/
 │   └── 📁 assets/
-│       └── 📁 logo1.ico              # App favicon
+│       ├── gglogo.png                # Main Geisha Gains logo
+│       ├── ggbanner.png              # Main Geisha Gains banner
+│       ├── logo.png                  # Logo placeholder
+│       ├── banner.png                # Banner placeholder
+│       ├── logo-square.png           # Square logo placeholder
+│       ├── logo-horizontal.png       # Horizontal logo placeholder
+│       ├── banner-main.png           # Main banner placeholder
+│       ├── banner-compact.png        # Compact banner placeholder
+│       ├── logo1.ico                 # App favicon
+│       └── README.md                 # Asset documentation
 ├── components.json                   # shadcn/ui config
 ├── jsconfig.json                     # JavaScript configuration
 ├── next.config.js                    # Next.js configuration
@@ -251,9 +275,21 @@ This project includes comprehensive design specifications for branding and visua
 - Horizontal banner version with coffee branding
 - Monospace typography with thick borders
 
+<div align="center">
+
+<img width="200" height="200" alt="Geisha Gains Logo" src="assets/gglogo.png" />
+
+</div>
+
 **Banner Designs:**
 - Main banner (1920x600px) with threat radar preview
 - Compact header banner (1200x300px) for navigation
+
+<div align="center">
+
+<img width="800" height="200" alt="Geisha Gains Banner" src="assets/ggbanner.png" />
+
+</div>
 
 **Usage:**
 - Website headers and navigation
