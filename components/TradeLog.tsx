@@ -1,16 +1,16 @@
 /**
  * Geisha Gains - Trade Log Component
  * Coffee Driven Development - BugsByte 2026
- * 
+ *
  * Minimalist black-and-white trade history with P&L
  */
 
-'use client';
+"use client";
 
 interface Transaction {
   id: string;
   symbol: string;
-  type: 'BUY' | 'SELL';
+  type: "BUY" | "SELL";
   amount: number;
   price: number;
   totalValue: number;
@@ -28,17 +28,19 @@ export function TradeLog({ transactions }: TradeLogProps) {
   const totalPnL = transactions.reduce((sum, t) => sum + (t.pnl || 0), 0);
 
   return (
-    <div className="border-4 border-black bg-white">
+    <div className="border-4 border-white bg-black text-white">
       {/* Header */}
-      <div className="border-b-4 border-black p-4 bg-black text-white">
+      <div className="border-b-4 border-white p-4 bg-black text-white">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black uppercase tracking-tight">
             TRADE LOG
           </h2>
           <div className="text-right">
             <div className="text-xs font-bold">TOTAL P&L</div>
-            <div className={`text-2xl font-black ${totalPnL >= 0 ? '' : 'text-red-600'}`}>
-              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+            <div
+              className={`text-2xl font-black ${totalPnL >= 0 ? "" : "text-red-600"}`}
+            >
+              {totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(2)}
             </div>
           </div>
         </div>
@@ -47,7 +49,7 @@ export function TradeLog({ transactions }: TradeLogProps) {
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="border-b-4 border-black bg-white">
+          <thead className="border-b-4 border-white bg-black">
             <tr>
               <th className="p-3 font-black uppercase">Time</th>
               <th className="p-3 font-black uppercase">Symbol</th>
@@ -70,13 +72,13 @@ export function TradeLog({ transactions }: TradeLogProps) {
             ) : (
               transactions.map((tx, idx) => {
                 const timestamp = new Date(tx.timestamp);
-                const isBuy = tx.type === 'BUY';
+                const isBuy = tx.type === "BUY";
 
                 return (
                   <tr
                     key={tx.id}
-                    className={`border-b-2 border-black hover:bg-gray-100 transition-colors ${
-                      tx.isOverdrive ? 'bg-red-50' : ''
+                    className={`border-b border-gray-700 hover:bg-gray-900 transition-colors ${
+                      tx.isOverdrive ? "bg-red-950/40" : ""
                     }`}
                   >
                     {/* Time */}
@@ -90,8 +92,8 @@ export function TradeLog({ transactions }: TradeLogProps) {
                     {/* Type */}
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 border-2 border-black font-black text-xs ${
-                          isBuy ? 'bg-black text-white' : 'bg-white text-black'
+                        className={`px-2 py-1 border-2 border-white font-black text-xs ${
+                          isBuy ? "bg-white text-black" : "bg-black text-white"
                         }`}
                       >
                         {tx.type}
@@ -116,8 +118,12 @@ export function TradeLog({ transactions }: TradeLogProps) {
                     {/* P&L */}
                     <td className="p-3 text-right font-mono font-black">
                       {tx.pnl !== null ? (
-                        <span className={tx.pnl >= 0 ? 'text-black' : 'text-red-600'}>
-                          {tx.pnl >= 0 ? '+' : ''}${tx.pnl.toFixed(2)}
+                        <span
+                          className={
+                            tx.pnl >= 0 ? "text-white" : "text-red-500"
+                          }
+                        >
+                          {tx.pnl >= 0 ? "+" : ""}${tx.pnl.toFixed(2)}
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>
@@ -126,13 +132,13 @@ export function TradeLog({ transactions }: TradeLogProps) {
 
                     {/* AI Confidence */}
                     <td className="p-3 text-center font-mono text-xs">
-                      {tx.confidence !== null ? `${tx.confidence}%` : '—'}
+                      {tx.confidence !== null ? `${tx.confidence}%` : "—"}
                     </td>
 
                     {/* Overdrive Status */}
                     <td className="p-3 text-center">
                       {tx.isOverdrive && (
-                        <span className="bg-red-600 text-white px-2 py-1 text-xs font-black border-2 border-black glitch-text">
+                        <span className="bg-red-600 text-white px-2 py-1 text-xs font-black border-2 border-white glitch-text">
                           [GLITCH]
                         </span>
                       )}
@@ -147,20 +153,24 @@ export function TradeLog({ transactions }: TradeLogProps) {
 
       {/* Footer Stats */}
       {transactions.length > 0 && (
-        <div className="border-t-4 border-black p-4 bg-gray-100">
+        <div className="border-t-4 border-white p-4 bg-black">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-xs font-bold text-gray-600">TOTAL TRADES</div>
+              <div className="text-xs font-bold text-gray-400">
+                TOTAL TRADES
+              </div>
               <div className="text-2xl font-black">{transactions.length}</div>
             </div>
             <div>
-              <div className="text-xs font-bold text-gray-600">GLITCH TRADES</div>
+              <div className="text-xs font-bold text-gray-400">
+                GLITCH TRADES
+              </div>
               <div className="text-2xl font-black text-red-600">
                 {transactions.filter((t) => t.isOverdrive).length}
               </div>
             </div>
             <div>
-              <div className="text-xs font-bold text-gray-600">WIN RATE</div>
+              <div className="text-xs font-bold text-gray-400">WIN RATE</div>
               <div className="text-2xl font-black">
                 {(
                   (transactions.filter((t) => (t.pnl || 0) > 0).length /

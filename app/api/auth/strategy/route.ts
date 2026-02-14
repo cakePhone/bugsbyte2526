@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
@@ -32,7 +33,7 @@ export async function PUT(req: Request) {
 
     const preferences =
       existing?.preferences && typeof existing.preferences === "object"
-        ? (existing.preferences as Record<string, unknown>)
+        ? (existing.preferences as Prisma.JsonObject)
         : {};
 
     const nextPreferences =
@@ -43,8 +44,8 @@ export async function PUT(req: Request) {
     await prisma.user.update({
       where: { id: session.sub },
       data: {
-        riskProfile,
-        preferences: nextPreferences,
+        riskProfile: riskProfile as Prisma.InputJsonValue,
+        preferences: nextPreferences as Prisma.InputJsonValue,
       },
     });
 

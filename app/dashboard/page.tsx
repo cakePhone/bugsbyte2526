@@ -15,12 +15,15 @@ import PriceChartSVG from "@/components/dashboard/PriceChartSVG";
 import ArticleDetailPanel from "@/components/dashboard/ArticleDetailPanel";
 import HoldingsPanel from "@/components/dashboard/HoldingsPanel";
 import HoldingsTradeModal from "@/components/dashboard/HoldingsTradeModal";
+import ExchangeSpreadTable from "@/components/ExchangeSpreadTable";
+import { TradeLog } from "@/components/TradeLog";
 import { formatMoney } from "@/components/dashboard/formatting";
 import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 import useDashboardData from "./hooks/useDashboardData";
 import useChartHistory from "./hooks/useChartHistory";
 import useNewsAnalysis from "./hooks/useNewsAnalysis";
 import useHoldingsTrade from "./hooks/useHoldingsTrade";
+import useArbitrageMonitor from "./hooks/useArbitrageMonitor";
 
 export default function WarRoom() {
   const router = useRouter();
@@ -80,6 +83,15 @@ export default function WarRoom() {
     loadUserData,
   });
 
+  const {
+    loading: arbitrageLoading,
+    scanCount: arbitrageScanCount,
+    opportunities,
+    orders,
+    cumulativePnL,
+    opportunityHistory,
+  } = useArbitrageMonitor(authChecked);
+
   const totalHoldingsValue = Object.entries(holdings).reduce(
     (acc, [symbol, amount]) => {
       const serverValue =
@@ -96,12 +108,8 @@ export default function WarRoom() {
     0,
   );
 
-  const opportunityCount = analyses.filter(
-    (analysis) =>
-      analysis.action === "BUY" &&
-      analysis.sentiment === "BULLISH" &&
-      analysis.global_score >= 7 &&
-      analysis.portfolio_threat <= 6,
+  const opportunityCount = opportunities.filter(
+    (opportunity) => opportunity.execution.shouldTrade,
   ).length;
 
   if (!authChecked) {
@@ -185,7 +193,7 @@ export default function WarRoom() {
       </header>
 
       <main className="max-w-[1600px] mx-auto p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <DashboardStatCard
             label="PORTFOLIO VALUE"
             value={formatMoney(totalHoldingsValue, displayCurrency)}
@@ -197,6 +205,81 @@ export default function WarRoom() {
             }
             alert={opportunityCount > 0}
           />
+          <DashboardStatCard
+            label="ARBITRAGE P&L"
+            value={`${cumulativePnL >= 0 ? "+" : ""}${formatMoney(cumulativePnL, "USD")}`}
+            alert={cumulativePnL > 0}
+          />
+        </div>
+
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12 xl:col-span-8 space-y-4">
+            <div>
+              <ExchangeSpreadTable opportunities={opportunities} />
+              <div className="border-4 border-t-0 border-white bg-black px-4 py-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest">
+                  ARBITRAGE SCANS: {arbitrageScanCount}
+                </span>
+                <span
+                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${
+                    arbitrageLoading ? "text-red-500" : "text-gray-400"
+                  }`}
+                >
+                  {arbitrageLoading ? "SYNCING FEEDS..." : "LIVE"}
+                </span>
+              </div>
+            </div>
+
+            <TradeLog transactions={orders} />
+          </div>
+
+          <div className="col-span-12 xl:col-span-4">
+            <div className="border-4 border-white bg-black h-full max-h-[1000px] overflow-y-auto">
+              <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest">
+                  OPPORTUNITY HISTORY
+                </h3>
+                <span className="text-[10px] text-gray-500">
+                  {opportunityHistory.length} EVENTS
+                </span>
+              </div>
+
+              <div>
+                {opportunityHistory.length === 0 ? (
+                  <div className="p-6 text-xs text-gray-500">
+                    WAITING FOR NET-PROFITABLE SPREADS...
+                  </div>
+                ) : (
+                  opportunityHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      className="border-b border-gray-800 px-4 py-3 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-white">
+                          {item.symbol}
+                        </span>
+                        <span className="text-[#D4AF37] font-bold">
+                          {item.netSpreadPct >= 0 ? "+" : ""}
+                          {item.netSpreadPct.toFixed(4)}%
+                        </span>
+                      </div>
+                      <div className="text-gray-400 mt-1">
+                        BUY {item.buyExchange} → SELL {item.sellExchange}
+                      </div>
+                      <div className="text-gray-500 mt-1">
+                        est. {item.estimatedNetUsdPerUnit >= 0 ? "+" : ""}$
+                        {item.estimatedNetUsdPerUnit.toFixed(4)} / unit
+                      </div>
+                      <div className="text-gray-600 mt-1">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-12 gap-4">

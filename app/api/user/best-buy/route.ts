@@ -11,6 +11,8 @@ import { fetchAllPrices } from "@/lib/uphold-api";
 import { getAvailableSymbols } from "@/lib/coinCatalog";
 import { analyzeMarketWithNIM } from "@/lib/nvidia-nim";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getSession();

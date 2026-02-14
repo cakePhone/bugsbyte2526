@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { fetchAllPrices } from "@/lib/uphold-api";
 
+export const dynamic = "force-dynamic";
+
 type Quote = "USD" | "EUR";
 
 async function fetchUsdtEurRate(): Promise<number> {

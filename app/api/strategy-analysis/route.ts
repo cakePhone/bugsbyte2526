@@ -6,6 +6,8 @@ import { getAvailableSymbols } from "@/lib/coinCatalog";
 import { collectMarketSnapshots } from "@/lib/marketSnapshots";
 import { computeAndPersistWalletValuations } from "@/lib/walletValuation";
 
+export const dynamic = "force-dynamic";
+
 interface StrategyReview {
   stance: "STRONG" | "GOOD" | "CAUTION" | "RISK";
   score: number;
