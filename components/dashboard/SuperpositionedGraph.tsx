@@ -295,9 +295,34 @@ export default function SuperpositionedGraph({
   }, [soloAsset, superimposeAsset]);
 
   // Handle trade order submission
-  const handleTrade = useCallback((order: TradeOrder) => {
-    console.log("Trade order submitted:", order);
-    // TODO: Integrate with actual trading API
+  const handleTrade = useCallback(async (order: TradeOrder) => {
+    try {
+      if (order.side === "sell") {
+        // Execute sell
+        const res = await fetch("/api/user/wallets/sell", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            symbol: order.symbol,
+            amountCoin: order.quantity,
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Sell failed");
+        }
+        
+        alert(`✓ Sold ${order.quantity} ${order.symbol}`);
+        window.location.reload();
+      } else {
+        // For buy orders, show a message that wallet creation is needed
+        alert(`Buy order for ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)} - Wallet integration in progress. Use Holdings panel to buy assets you already own.`);
+      }
+    } catch (error) {
+      console.error("[TRADE] Error:", error);
+      alert(error instanceof Error ? error.message : "Trade execution failed");
+    }
     // For now, just log the order
   }, []);
 
@@ -551,19 +576,56 @@ export default function SuperpositionedGraph({
                   ? padding + (1 - (latestNorm.value - minPct) / range) * (height - 2 * padding)
                   : height / 2;
 
+                // Calculate mountain fill path (for MOUNTAIN style)
+                const mountainPath = state.chartType === "MOUNTAIN" ? (() => {
+                  const zeroY = padding + (1 - (0 - minPct) / range) * (height - 2 * padding);
+                  const points = path.split(" ");
+                  if (points.length < 2) return "";
+                  
+                  const firstPoint = points[0].split(",");
+                  const lastPoint = points[points.length - 1].split(",");
+                  
+                  return `${path} ${lastPoint[0]},${zeroY} ${firstPoint[0]},${zeroY} Z`;
+                })() : "";
+
                 return (
                   <g key={layer.id}>
-                    {/* Main Line — strict polyline, no curves */}
-                    <polyline
-                      points={path}
-                      fill="none"
-                      stroke={layer.color}
-                      strokeWidth={layer.lineWidth}
-                      strokeDasharray={layer.lineStyle === "dashed" ? "8,4" : "none"}
-                      opacity={layer.visible ? 1 : 0.3}
-                      strokeLinejoin="miter"
-                      strokeLinecap="butt"
-                    />
+                    {/* MOUNTAIN Style - Area fill */}
+                    {state.chartType === "MOUNTAIN" && (
+                      <path
+                        d={mountainPath}
+                        fill={layer.color}
+                        fillOpacity={0.2}
+                        stroke="none"
+                      />
+                    )}
+
+                    {/* CANDLESTICK Style - TODO: Requires OHLC data */}
+                    {state.chartType === "CANDLESTICK" && (
+                      <text
+                        x={width / 2}
+                        y={height / 2}
+                        fill="#FF0000"
+                        className="text-xs font-black"
+                        textAnchor="middle"
+                      >
+                        ⚠ CANDLESTICK REQUIRES OHLC DATA
+                      </text>
+                    )}
+
+                    {/* LINE Style (default) - strict polyline, no curves */}
+                    {(state.chartType === "LINE" || state.chartType === "MOUNTAIN") && (
+                      <polyline
+                        points={path}
+                        fill="none"
+                        stroke={layer.color}
+                        strokeWidth={layer.lineWidth}
+                        strokeDasharray={layer.lineStyle === "dashed" ? "8,4" : "none"}
+                        opacity={layer.visible ? 1 : 0.3}
+                        strokeLinejoin="miter"
+                        strokeLinecap="butt"
+                      />
+                    )}
 
                     {/* End Label */}
                     <text

@@ -54,6 +54,38 @@ function WarRoomContent() {
     holdings,
   });
 
+  // Trade execution handlers
+  const [isExecutingTrade, setIsExecutingTrade] = useState(false);
+
+  const handleSellRequest = async (symbol: string, amount: number) => {
+    if (isExecutingTrade) return;
+    
+    try {
+      setIsExecutingTrade(true);
+      const res = await fetch("/api/user/wallets/sell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          amountCoin: amount,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Sell failed");
+      }
+
+      // Reload user data after successful trade
+      window.location.reload();
+    } catch (error) {
+      console.error("[SELL] Error:", error);
+      alert(error instanceof Error ? error.message : "Failed to execute sell order");
+    } finally {
+      setIsExecutingTrade(false);
+    }
+  };
+
   // Get symbols from WarRoom state layers
   const selectedSymbols = state.layers.map((l) => l.symbol);
 
@@ -181,6 +213,7 @@ function WarRoomContent() {
           currency={displayCurrency}
           threatenedSymbols={threatenedSymbols}
           priceChanges24h={{}}
+          onSellRequest={handleSellRequest}
         />
       </div>
 
