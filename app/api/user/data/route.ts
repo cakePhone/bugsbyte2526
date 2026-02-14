@@ -57,7 +57,8 @@ export async function GET() {
     (acc, walletEntry) => {
       const symbol = String(walletEntry.symbol || "").toUpperCase();
       const amount = Number(walletEntry.balanceCoin || 0);
-      if (!symbol || !Number.isFinite(amount) || amount <= 0) return acc;
+      // Skip USDT — it's tracked via wallet.balanceUsdt (FREE FUNDS), not as a holding
+      if (!symbol || symbol === "USDT" || !Number.isFinite(amount) || amount <= 0) return acc;
       acc[symbol] = (acc[symbol] || 0) + amount;
       return acc;
     },

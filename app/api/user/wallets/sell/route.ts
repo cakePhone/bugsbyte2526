@@ -179,30 +179,8 @@ export async function POST(req: Request) {
         },
       });
 
-      // Also update USDT coinWallet for consistency
-      const existingUsdtWallet = await db.coinWallet.findFirst({
-        where: { userId: session.sub, symbol: "USDT" },
-        orderBy: { createdAt: "asc" },
-      });
-
-      if (existingUsdtWallet) {
-        await db.coinWallet.update({
-          where: { id: existingUsdtWallet.id },
-          data: {
-            balanceCoin:
-              Number(existingUsdtWallet.balanceCoin || 0) + grossValue,
-          },
-        });
-      } else {
-        await db.coinWallet.create({
-          data: {
-            userId: session.sub,
-            symbol: "USDT",
-            label: "Trade Proceeds",
-            balanceCoin: grossValue,
-          },
-        });
-      }
+      // DO NOT create/update USDT coinWallet — balanceUsdt is the single source of truth
+      // for free funds. Adding USDT to coinWallet causes double-counting.
 
       await tx.transaction.create({
         data: {
