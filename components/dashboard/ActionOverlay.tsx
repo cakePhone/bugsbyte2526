@@ -64,21 +64,21 @@ export default function ActionOverlay({
               opacity: 1,
               y: 0,
               scale: 1,
-              borderColor: ["#FF0000", "#CC0000", "#FF0000"],
+              borderColor: ["#DD0000", "#CC0000", "#DD0000"],
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{
               borderColor: { repeat: Infinity, duration: 0.5 },
             }}
-            className="border-4 border-[#FF0000] bg-black text-white p-4 shadow-[0_0_30px_rgba(255,0,0,0.4)]"
+            className="border-4 border-[#DD0000] bg-black text-white p-4 shadow-[0_0_30px_rgba(255,0,0,0.4)]"
           >
             {/* Alert Header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="bg-[#FF0000] text-white text-[10px] font-bold px-1.5 py-0.5">
+                <span className="bg-[#DD0000] text-white text-[10px] font-bold px-1.5 py-0.5">
                   LETHAL
                 </span>
-                <span className="text-xs font-bold text-[#FF0000]">
+                <span className="text-xs font-bold text-[#DD0000]">
                   T{alert.analysis.threat_level}
                 </span>
               </div>
@@ -86,7 +86,7 @@ export default function ActionOverlay({
                 onClick={() =>
                   onDismiss(`${alert.analysis.id}-${alert.affectedHolding}`)
                 }
-                className="text-gray-500 hover:text-white text-xs"
+                className="text-gray-300 hover:text-white text-xs"
               >
                 ✕
               </button>
@@ -95,29 +95,29 @@ export default function ActionOverlay({
             {/* Asset at Risk */}
             <div className="flex items-center gap-3 mb-3">
               <motion.div
-                className="text-2xl font-bold text-[#FF0000]"
+                className="text-2xl font-bold text-[#DD0000]"
                 animate={{ opacity: [1, 0.5, 1] }}
                 transition={{ repeat: Infinity, duration: 0.8 }}
               >
                 {alert.affectedHolding}
               </motion.div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-gray-300">
                 <div>HOLDING: {alert.amount.toFixed(6)}</div>
-                <div className="mt-0.5 text-[#FF0000] font-bold">
+                <div className="mt-0.5 text-[#DD0000] font-bold">
                   {alert.analysis.reasoning}
                 </div>
               </div>
             </div>
 
             {/* Event Info */}
-            <p className="text-[10px] text-gray-500 mb-3 leading-tight">
+            <p className="text-[10px] text-gray-300 mb-3 leading-tight">
               {alert.analysis.original.headline}
             </p>
 
             {/* Quick Sell Button */}
             <motion.button
               onClick={() => onQuickSell(alert.affectedHolding)}
-              className="w-full border-4 border-[#FF0000] bg-[#FF0000] text-white py-2 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-[#FF0000] transition-colors"
+              className="w-full border-4 border-[#DD0000] bg-[#DD0000] text-white py-2 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-[#DD0000] transition-colors"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -163,11 +163,11 @@ export function FatalEventLine({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="w-[2px] h-full bg-[#FF0000]" />
-              <div className="absolute top-2 -translate-x-1/2 bg-[#FF0000] text-white text-[8px] font-bold px-1.5 py-0.5 whitespace-nowrap">
+              <div className="w-[2px] h-full bg-[#DD0000]" />
+              <div className="absolute top-2 -translate-x-1/2 bg-[#DD0000] text-white text-[8px] font-bold px-1.5 py-0.5 whitespace-nowrap">
                 FATAL EVENT DETECTED
               </div>
-              <div className="absolute bottom-2 -translate-x-1/2 max-w-[120px] truncate bg-black/80 text-[#FF0000] text-[7px] font-bold px-1 py-0.5 whitespace-nowrap">
+              <div className="absolute bottom-2 -translate-x-1/2 max-w-[120px] truncate bg-black/80 text-[#DD0000] text-[7px] font-bold px-1 py-0.5 whitespace-nowrap">
                 {event.headline}
               </div>
             </motion.div>

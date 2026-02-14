@@ -31,21 +31,21 @@ export default function TheBulletin({
   onNextPage,
 }: BulletinProps) {
   return (
-    <div className="border-4 border-white bg-black h-full flex flex-col">
+    <div className="border-4 border-gray-300 bg-black h-full flex flex-col">
       {/* Header */}
-      <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+      <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-bold tracking-widest text-white">
             THE BULLETIN
           </h2>
           <div className="mt-1 flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#FF0000] animate-pulse" />
-            <span className="text-xs text-gray-400">
+            <div className="w-2 h-2 bg-[#DD0000] animate-pulse" />
+            <span className="text-xs text-gray-300">
               {analyses.length} ITEMS
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-500">
+        <div className="flex items-center gap-2 text-[10px] text-gray-300">
           <span>
             PAGE {page}/{Math.max(1, totalPages)}
           </span>
@@ -76,9 +76,9 @@ export default function TheBulletin({
             const isSelected = selectedId === item.id;
 
             let borderColor = "border-gray-700";
-            if (isLethal) borderColor = "border-[#FF0000]";
-            else if (isSell) borderColor = "border-[#FF0000]";
-            else if (isHighGlobal) borderColor = "border-[#D4AF37]";
+            if (isLethal) borderColor = "border-[#DD0000]";
+            else if (isSell) borderColor = "border-[#DD0000]";
+            else if (isHighGlobal) borderColor = "border-[#C9A832]";
 
             return (
               <motion.button
@@ -98,7 +98,7 @@ export default function TheBulletin({
                     <SentimentTag sentiment={item.sentiment} />
                     <ActionTag action={item.action} />
                   </div>
-                  <span className="text-[10px] text-gray-500 font-mono">
+                  <span className="text-[10px] text-gray-300 font-mono">
                     {formatTime(item.timestamp)}
                   </span>
                 </div>
@@ -107,7 +107,7 @@ export default function TheBulletin({
                 <p
                   className={`text-sm font-bold leading-tight mb-1 ${
                     isLethal
-                      ? "text-[#FF0000]"
+                      ? "text-[#DD0000]"
                       : isSell
                         ? "text-[#FF6666]"
                         : "text-white"
@@ -117,7 +117,7 @@ export default function TheBulletin({
                 </p>
 
                 {/* Summary */}
-                <p className="text-xs text-gray-400 leading-snug">
+                <p className="text-xs text-gray-300 leading-snug">
                   {item.summary}
                 </p>
 
@@ -128,8 +128,8 @@ export default function TheBulletin({
                       item.ai_review.verdict === "AGREE"
                         ? "border-green-500 text-green-400"
                         : item.ai_review.verdict === "DISAGREE"
-                          ? "border-[#FF0000] text-[#FF0000]"
-                          : "border-[#D4AF37] text-[#D4AF37]"
+                          ? "border-[#DD0000] text-[#DD0000]"
+                          : "border-[#C9A832] text-[#C9A832]"
                     }`}
                   >
                     AI REVIEW: {item.ai_review.verdict}
@@ -145,7 +145,7 @@ export default function TheBulletin({
                     {item.affected_assets.map((sym) => (
                       <span
                         key={sym}
-                        className="text-[9px] font-bold px-1.5 py-0.5 border border-gray-700 text-gray-400"
+                        className="text-[9px] font-bold px-1.5 py-0.5 border border-gray-700 text-gray-300"
                       >
                         {sym}
                       </span>
@@ -170,9 +170,9 @@ export default function TheBulletin({
 // ── Sub-components ────────────────────────────────────────
 
 function ThreatBadge({ level }: { level: number }) {
-  let bg = "bg-gray-800 text-gray-400";
-  if (level >= 8) bg = "bg-[#FF0000] text-white";
-  else if (level >= 5) bg = "bg-[#D4AF37] text-black";
+  let bg = "bg-gray-800 text-gray-300";
+  if (level >= 8) bg = "bg-[#DD0000] text-white";
+  else if (level >= 5) bg = "bg-[#C9A832] text-black";
 
   return (
     <span className={`text-[10px] font-bold px-1.5 py-0.5 ${bg}`}>
@@ -183,14 +183,14 @@ function ThreatBadge({ level }: { level: number }) {
 
 function SentimentTag({ sentiment }: { sentiment: string }) {
   const colors: Record<string, string> = {
-    LETHAL: "text-[#FF0000] border-[#FF0000]",
+    LETHAL: "text-[#DD0000] border-[#DD0000]",
     BEARISH: "text-[#FF6666] border-[#FF6666]",
     BULLISH: "text-green-400 border-green-400",
   };
 
   return (
     <span
-      className={`text-[9px] font-bold px-1 py-0.5 border ${colors[sentiment] || "text-gray-400 border-gray-600"}`}
+      className={`text-[9px] font-bold px-1 py-0.5 border ${colors[sentiment] || "text-gray-300 border-gray-300"}`}
     >
       {sentiment}
     </span>
@@ -199,15 +199,15 @@ function SentimentTag({ sentiment }: { sentiment: string }) {
 
 function ActionTag({ action }: { action: string }) {
   const colors: Record<string, string> = {
-    SELL: "bg-[#FF0000] text-white",
+    SELL: "bg-[#DD0000] text-white",
     BUY: "bg-white text-black",
     HODL: "bg-gray-800 text-gray-300",
-    REBALANCE: "bg-[#D4AF37] text-black",
+    REBALANCE: "bg-[#C9A832] text-black",
   };
 
   return (
     <span
-      className={`text-[9px] font-bold px-1.5 py-0.5 ${colors[action] || "bg-gray-800 text-gray-400"}`}
+      className={`text-[9px] font-bold px-1.5 py-0.5 ${colors[action] || "bg-gray-800 text-gray-300"}`}
     >
       {action}
     </span>

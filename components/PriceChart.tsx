@@ -143,7 +143,7 @@ export function PriceChart({ symbol, priceHistory, signals, currentPrice }: Pric
                   cx={x}
                   cy={y}
                   r={size}
-                  fill={isBuy ? '#000000' : '#FF0000'}
+                  fill={isBuy ? '#000000' : '#DD0000'}
                   opacity={0.3}
                 />
                 {/* Signal marker */}
@@ -151,7 +151,7 @@ export function PriceChart({ symbol, priceHistory, signals, currentPrice }: Pric
                   cx={x}
                   cy={y}
                   r={4}
-                  fill={isBuy ? '#000000' : '#FF0000'}
+                  fill={isBuy ? '#000000' : '#DD0000'}
                   stroke="white"
                   strokeWidth="2"
                 />
@@ -162,7 +162,7 @@ export function PriceChart({ symbol, priceHistory, signals, currentPrice }: Pric
                   textAnchor="middle"
                   fontSize="10"
                   fontWeight="bold"
-                  fill={isBuy ? '#000000' : '#FF0000'}
+                  fill={isBuy ? '#000000' : '#DD0000'}
                 >
                   {signal.type}
                 </text>

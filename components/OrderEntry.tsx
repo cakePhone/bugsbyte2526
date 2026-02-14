@@ -58,7 +58,7 @@ export default function OrderEntry({
       <div className="p-4 space-y-4">
         {/* Symbol selector */}
         <div>
-          <label className="text-[10px] font-mono font-black uppercase text-gray-500 block mb-1">
+          <label className="text-[10px] font-mono font-black uppercase text-gray-300 block mb-1">
             ASSET
           </label>
           <div className="flex gap-2">
@@ -80,7 +80,7 @@ export default function OrderEntry({
 
         {/* Side toggle */}
         <div>
-          <label className="text-[10px] font-mono font-black uppercase text-gray-500 block mb-1">
+          <label className="text-[10px] font-mono font-black uppercase text-gray-300 block mb-1">
             SIDE
           </label>
           <div className="flex gap-2">
@@ -109,7 +109,7 @@ export default function OrderEntry({
 
         {/* Amount input — big, bold, Coinbase-style */}
         <div>
-          <label className="text-[10px] font-mono font-black uppercase text-gray-500 block mb-1">
+          <label className="text-[10px] font-mono font-black uppercase text-gray-300 block mb-1">
             AMOUNT ({symbol})
           </label>
           <input
@@ -126,15 +126,15 @@ export default function OrderEntry({
         {/* Price info */}
         <div className="border-4 border-black p-3 bg-gray-50 space-y-1">
           <div className="flex justify-between font-mono text-sm">
-            <span className="text-gray-500 font-bold">PRICE</span>
+            <span className="text-gray-300 font-bold">PRICE</span>
             <span className="font-black">${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between font-mono text-sm">
-            <span className="text-gray-500 font-bold">EXCHANGE</span>
+            <span className="text-gray-300 font-bold">EXCHANGE</span>
             <span className="font-black">{exchange}</span>
           </div>
           <div className="flex justify-between font-mono text-sm border-t-2 border-black pt-1">
-            <span className="text-gray-500 font-bold">TOTAL</span>
+            <span className="text-gray-300 font-bold">TOTAL</span>
             <span className="font-black text-lg">
               ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>

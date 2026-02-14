@@ -84,7 +84,7 @@ export function CoffeePot() {
         className={`w-full border-4 border-black p-4 font-black text-xl uppercase transition-colors ${
           canActivate
             ? 'bg-black text-white hover:bg-red-500 hover:text-white cursor-pointer'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : 'bg-gray-300 text-gray-300 cursor-not-allowed'
         }`}
       >
         {isOverdrive

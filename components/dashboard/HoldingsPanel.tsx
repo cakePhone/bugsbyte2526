@@ -82,8 +82,8 @@ export default function HoldingsPanel({
   }
 
   return (
-    <div className="border-4 border-white bg-black h-full flex flex-col">
-      <div className="border-b-4 border-white px-4 py-2">
+    <div className="border-4 border-gray-300 bg-black h-full flex flex-col">
+      <div className="border-b-4 border-gray-300 px-4 py-2">
         <h2 className="text-sm font-bold tracking-widest text-white">
           HOLDINGS
         </h2>
@@ -91,10 +91,10 @@ export default function HoldingsPanel({
 
       <div className="flex-1 overflow-y-auto">
         <div className="border-b-2 border-gray-800 px-4 py-3">
-          <div className="text-[10px] text-gray-500 font-bold">
+          <div className="text-[10px] text-gray-300 font-bold">
             TOTAL WALLET VALUE
           </div>
-          <div className="text-lg font-bold text-[#D4AF37]">
+          <div className="text-lg font-bold text-[#C9A832]">
             {formatMoney(walletTotalValue, currency)}
           </div>
         </div>
@@ -139,22 +139,22 @@ export default function HoldingsPanel({
                 );
           const actionTone =
             recommendedAction === "REBALANCE"
-              ? "text-[#FF0000] border-[#FF0000]"
+              ? "text-[#DD0000] border-[#DD0000]"
               : recommendedAction === "BUY"
-                ? "text-white border-white"
-                : "text-gray-400 border-gray-600";
+                ? "text-white border-gray-300"
+                : "text-gray-300 border-gray-300";
 
           return (
             <motion.div
               key={sym}
               className={`border-b-2 px-4 py-3 ${
                 isThreatened
-                  ? "border-[#FF0000] bg-[#1a0000]"
+                  ? "border-[#DD0000] bg-[#1a0000]"
                   : "border-gray-800"
               }`}
               animate={
                 isThreatened
-                  ? { borderColor: ["#FF0000", "#660000", "#FF0000"] }
+                  ? { borderColor: ["#DD0000", "#660000", "#DD0000"] }
                   : {}
               }
               transition={
@@ -166,7 +166,7 @@ export default function HoldingsPanel({
                   <span className="font-bold text-sm">{sym}</span>
                   {isThreatened && (
                     <motion.span
-                      className="text-[9px] bg-[#FF0000] text-white px-1 py-0.5 font-bold"
+                      className="text-[9px] bg-[#DD0000] text-white px-1 py-0.5 font-bold"
                       animate={{ opacity: [1, 0.5, 1] }}
                       transition={{ repeat: Infinity, duration: 0.5 }}
                     >
@@ -179,10 +179,10 @@ export default function HoldingsPanel({
                 </span>
               </div>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[10px] text-gray-300">
                   {amt.toFixed(6)} {sym}
                 </span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[10px] text-gray-300">
                   @ {currency === "EUR" ? "€" : "$"}
                   {price.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
@@ -192,7 +192,7 @@ export default function HoldingsPanel({
 
               <div className="mt-2 border border-gray-800 p-2 bg-black/40 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] text-gray-500 font-bold">
+                  <span className="text-[9px] text-gray-300 font-bold">
                     AI RECOMMENDATION
                   </span>
                   <span
@@ -201,7 +201,7 @@ export default function HoldingsPanel({
                     {recommendedAction}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 leading-snug">
+                <p className="text-[10px] text-gray-300 leading-snug">
                   {bestAnalysis?.summary ||
                     "NO ACTIVE SIGNAL FOR THIS COIN. MAINTAIN DISCIPLINE."}
                 </p>
@@ -221,7 +221,7 @@ export default function HoldingsPanel({
                         "ROTATE BETWEEN COINS BASED ON STRONGER RELATIVE OPPORTUNITY.",
                     })
                   }
-                  className="w-full border-2 border-white px-2 py-1 text-[10px] font-bold tracking-widest text-white hover:bg-white hover:text-black transition-colors"
+                  className="w-full border-2 border-gray-300 px-2 py-1 text-[10px] font-bold tracking-widest text-white hover:bg-white hover:text-black transition-colors"
                 >
                   OPEN SWAP DIALOG
                 </button>

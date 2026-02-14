@@ -194,27 +194,27 @@ export default function TheInterrogation({
   return (
     <div className="min-h-screen bg-[#121212] flex items-center justify-center p-4">
       <motion.div
-        className="w-full max-w-2xl border-4 border-white bg-black text-white font-mono"
+        className="w-full max-w-2xl border-4 border-gray-300 bg-black text-white font-mono"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
         {/* Terminal Header */}
-        <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+        <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
           <span className="text-xs font-bold tracking-widest">
             GEISHA GAINS // THE INTERROGATION
           </span>
           <div className="flex items-center gap-3">
             <button
               onClick={onLoginClick}
-              className="text-xs font-bold tracking-widest text-gray-400 hover:text-white transition-colors uppercase"
+              className="text-xs font-bold tracking-widest text-gray-300 hover:text-white transition-colors uppercase"
             >
               LOG IN
             </button>
             <div className="flex gap-2">
-              <div className="w-3 h-3 bg-[#FF0000]" />
+              <div className="w-3 h-3 bg-[#DD0000]" />
               <div className="w-3 h-3 bg-white" />
-              <div className="w-3 h-3 border-2 border-white" />
+              <div className="w-3 h-3 border-2 border-gray-300" />
             </div>
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function TheInterrogation({
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col justify-between"
               >
-                <pre className="text-sm leading-relaxed whitespace-pre-wrap text-[#FF0000]">
+                <pre className="text-sm leading-relaxed whitespace-pre-wrap text-[#DD0000]">
                   {introDisplayed}
                   <span className="animate-pulse">█</span>
                 </pre>
@@ -240,7 +240,7 @@ export default function TheInterrogation({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     onClick={begin}
-                    className="mt-8 self-start border-4 border-white bg-black text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
+                    className="mt-8 self-start border-4 border-gray-300 bg-black text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
                   >
                     {">"} BEGIN INTERROGATION
                   </motion.button>
@@ -264,7 +264,7 @@ export default function TheInterrogation({
                       key={i}
                       className={`h-1 flex-1 ${
                         i < step
-                          ? "bg-[#FF0000]"
+                          ? "bg-[#DD0000]"
                           : i === step
                             ? "bg-white"
                             : "bg-gray-700"
@@ -275,7 +275,7 @@ export default function TheInterrogation({
 
                 {/* Question Text */}
                 <div className="text-lg font-bold mb-6 min-h-[2rem]">
-                  <span className="text-[#FF0000]">
+                  <span className="text-[#DD0000]">
                     [{String(step + 1).padStart(2, "0")}]
                   </span>{" "}
                   <span>{qDisplayed}</span>
@@ -303,16 +303,16 @@ export default function TheInterrogation({
                           onClick={() => selectOption(opt.value)}
                           className={`w-full text-left border-4 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all ${
                             isSelected
-                              ? "border-[#FF0000] bg-[#FF0000] text-white"
-                              : "border-gray-600 hover:border-white bg-black text-white"
+                              ? "border-[#DD0000] bg-[#DD0000] text-white"
+                              : "border-gray-300 hover:border-gray-300 bg-black text-white"
                           }`}
                         >
-                          <span className="text-gray-500 mr-3">
+                          <span className="text-gray-300 mr-3">
                             {String(i + 1).padStart(2, "0")}
                           </span>
                           {opt.label}
                           {opt.desc && (
-                            <span className="text-gray-400 ml-2 text-xs font-normal">
+                            <span className="text-gray-300 ml-2 text-xs font-normal">
                               — {opt.desc}
                             </span>
                           )}
@@ -326,7 +326,7 @@ export default function TheInterrogation({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         onClick={confirmMulti}
-                        className="mt-4 border-4 border-[#FF0000] bg-[#FF0000] text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black hover:border-white transition-colors"
+                        className="mt-4 border-4 border-[#DD0000] bg-[#DD0000] text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black hover:border-gray-300 transition-colors"
                       >
                         CONFIRM SELECTION ({multiSelection.length})
                       </motion.button>
@@ -348,19 +348,19 @@ export default function TheInterrogation({
                 {/* Progress — all question bars filled */}
                 <div className="flex items-center gap-2 mb-6">
                   {QUESTIONS.map((_, i) => (
-                    <div key={i} className="h-1 flex-1 bg-[#FF0000]" />
+                    <div key={i} className="h-1 flex-1 bg-[#DD0000]" />
                   ))}
                   <div className="h-1 flex-1 bg-white" />
                 </div>
 
                 <div className="text-lg font-bold mb-6">
-                  <span className="text-[#FF0000]">[05]</span>{" "}
+                  <span className="text-[#DD0000]">[05]</span>{" "}
                   {"> CREATE YOUR IDENTITY."}
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                    <label className="block text-xs text-gray-300 mb-1 uppercase tracking-widest">
                       Email
                     </label>
                     <input
@@ -368,11 +368,11 @@ export default function TheInterrogation({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="operator@geisha.gains"
-                      className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                      className="w-full bg-black border-4 border-gray-300 text-white font-mono px-4 py-3 text-sm focus:border-gray-300 focus:outline-none transition-colors placeholder:text-gray-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                    <label className="block text-xs text-gray-300 mb-1 uppercase tracking-widest">
                       Password
                     </label>
                     <input
@@ -380,11 +380,11 @@ export default function TheInterrogation({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                      className="w-full bg-black border-4 border-gray-300 text-white font-mono px-4 py-3 text-sm focus:border-gray-300 focus:outline-none transition-colors placeholder:text-gray-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                    <label className="block text-xs text-gray-300 mb-1 uppercase tracking-widest">
                       Confirm Password
                     </label>
                     <input
@@ -392,12 +392,12 @@ export default function TheInterrogation({
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                      className="w-full bg-black border-4 border-gray-300 text-white font-mono px-4 py-3 text-sm focus:border-gray-300 focus:outline-none transition-colors placeholder:text-gray-700"
                     />
                   </div>
 
                   {signupError && (
-                    <div className="text-[#FF0000] text-xs font-bold">
+                    <div className="text-[#DD0000] text-xs font-bold">
                       {"> ERROR: "}
                       {signupError}
                     </div>
@@ -407,7 +407,7 @@ export default function TheInterrogation({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     onClick={submitSignup}
-                    className="mt-2 w-full border-4 border-[#FF0000] bg-[#FF0000] text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black hover:border-white transition-colors"
+                    className="mt-2 w-full border-4 border-[#DD0000] bg-[#DD0000] text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black hover:border-gray-300 transition-colors"
                   >
                     {">"} DEPLOY OPERATOR
                   </motion.button>
@@ -423,16 +423,16 @@ export default function TheInterrogation({
                 animate={{ opacity: 1 }}
                 className="flex-1 flex flex-col items-center justify-center text-center"
               >
-                <div className="text-[#FF0000] text-4xl font-bold mb-4">
+                <div className="text-[#DD0000] text-4xl font-bold mb-4">
                   ■■■
                 </div>
-                <pre className="text-sm text-[#FF0000] mb-4">
+                <pre className="text-sm text-[#DD0000] mb-4">
                   {"> PROFILING COMPLETE."}
                   {"\n"}
                   {"> INITIALIZING WAR ROOM..."}
                 </pre>
                 <motion.div
-                  className="w-8 h-8 border-4 border-white border-t-transparent rounded-full"
+                  className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{
                     repeat: Infinity,
@@ -446,7 +446,7 @@ export default function TheInterrogation({
         </div>
 
         {/* Terminal Footer */}
-        <div className="border-t-4 border-white px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+        <div className="border-t-4 border-gray-300 px-4 py-2 flex items-center justify-between text-xs text-gray-300">
           <span>COFFEE DRIVEN DEVELOPMENT</span>
           <span>
             STEP {Math.max(0, step + 1)}/{QUESTIONS.length + 1}

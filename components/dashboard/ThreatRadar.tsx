@@ -137,12 +137,12 @@ export default function ThreatRadar({
     <div
       className={`border-4 bg-black h-full flex flex-col ${
         pulse
-          ? "border-[#FF0000] shadow-[0_0_30px_rgba(255,0,0,0.5)]"
-          : "border-white"
+          ? "border-[#DD0000] shadow-[0_0_30px_rgba(255,0,0,0.5)]"
+          : "border-gray-300"
       } transition-all duration-300`}
     >
       {/* Header */}
-      <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+      <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
         <h2 className="text-sm font-bold tracking-widest text-white">
           THREAT RADAR
         </h2>
@@ -150,10 +150,10 @@ export default function ThreatRadar({
           <span
             className={`text-xs font-bold px-1.5 py-0.5 ${
               overallThreat > 7
-                ? "bg-[#FF0000] text-white"
+                ? "bg-[#DD0000] text-white"
                 : overallThreat > 4
-                  ? "bg-[#D4AF37] text-black"
-                  : "bg-gray-800 text-gray-400"
+                  ? "bg-[#C9A832] text-black"
+                  : "bg-gray-800 text-gray-300"
             }`}
           >
             AVG {overallThreat.toFixed(1)}
@@ -161,8 +161,8 @@ export default function ThreatRadar({
           <span
             className={`text-[9px] border px-1 py-0.5 ${
               sensitivity === "PARANOID"
-                ? "border-[#FF0000] text-[#FF0000]"
-                : "border-gray-600 text-gray-500"
+                ? "border-[#DD0000] text-[#DD0000]"
+                : "border-gray-300 text-gray-300"
             }`}
           >
             {sensitivity}
@@ -218,7 +218,7 @@ export default function ThreatRadar({
           <motion.polygon
             points={polygonStr}
             fill={pulse ? "rgba(255,0,0,0.3)" : "rgba(255,255,255,0.15)"}
-            stroke={pulse ? "#FF0000" : "#FFFFFF"}
+            stroke={pulse ? "#DD0000" : "#FFFFFF"}
             strokeWidth={2}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -232,7 +232,7 @@ export default function ThreatRadar({
               cx={p.x}
               cy={p.y}
               r={4}
-              fill={values[i] > 7 ? "#FF0000" : "#FFFFFF"}
+              fill={values[i] > 7 ? "#DD0000" : "#FFFFFF"}
               stroke="#000"
               strokeWidth={1}
               initial={{ scale: 0 }}
@@ -253,7 +253,7 @@ export default function ThreatRadar({
                 x={end.x + dx[i]}
                 y={end.y + dy[i]}
                 textAnchor={labelAnchors[i]}
-                className="text-[8px] font-bold fill-gray-400"
+                className="text-[8px] font-bold fill-gray-300"
               >
                 {labels[i]} ({values[i].toFixed(1)})
               </text>
@@ -263,15 +263,15 @@ export default function ThreatRadar({
       </div>
 
       {/* Footer — axis breakdown */}
-      <div className="border-t-4 border-white grid grid-cols-4 divide-x-2 divide-gray-800">
+      <div className="border-t-4 border-gray-300 grid grid-cols-4 divide-x-2 divide-gray-800">
         {labels.map((label, i) => (
           <div key={label} className="px-2 py-2 text-center">
             <div
-              className={`text-base font-bold ${values[i] > 7 ? "text-[#FF0000]" : "text-white"}`}
+              className={`text-base font-bold ${values[i] > 7 ? "text-[#DD0000]" : "text-white"}`}
             >
               {values[i].toFixed(1)}
             </div>
-            <div className="text-[8px] text-gray-500 tracking-wider">
+            <div className="text-[8px] text-gray-300 tracking-wider">
               {label.slice(0, 4)}
             </div>
           </div>

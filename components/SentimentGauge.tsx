@@ -84,7 +84,7 @@ export default function SentimentGauge({ bulls, bears }: Props) {
           >
             {bulls.toFixed(1)}%
           </motion.span>
-          <span className="text-[10px] text-gray-400">AI SENTIMENT</span>
+          <span className="text-[10px] text-gray-300">AI SENTIMENT</span>
           <motion.span
             className="text-xl text-red-600"
             key={bears}

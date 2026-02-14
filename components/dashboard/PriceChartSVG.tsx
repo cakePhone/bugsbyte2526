@@ -75,8 +75,8 @@ export default function PriceChartSVG({
 
   const palette: Record<string, string> = {
     BTC: "#FFFFFF",
-    ETH: "#D4AF37",
-    XRP: "#FF0000",
+    ETH: "#C9A832",
+    XRP: "#DD0000",
     SOL: "#00FFA3",
     ADA: "#6EA8FF",
     DOGE: "#D7B85C",
