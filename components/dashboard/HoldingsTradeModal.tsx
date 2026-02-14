@@ -67,17 +67,17 @@ export default function HoldingsTradeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg border-4 border-white bg-black p-4 space-y-4">
+      <div className="w-full max-w-lg border-4 border-gray-300 bg-black p-4 space-y-4">
         <div>
           <h3 className="text-sm font-bold text-white tracking-widest">
             HOLDINGS TRADE DIALOG
           </h3>
-          <p className="text-xs text-gray-400 mt-1">{request.reason}</p>
+          <p className="text-xs text-gray-300 mt-1">{request.reason}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="text-xs text-gray-300 space-y-1">
-            <div className="text-[10px] font-bold text-gray-500">ACTION</div>
+            <div className="text-[10px] font-bold text-gray-300">ACTION</div>
             <select
               value={action}
               onChange={(event) =>
@@ -91,7 +91,7 @@ export default function HoldingsTradeModal({
           </label>
 
           <label className="text-xs text-gray-300 space-y-1">
-            <div className="text-[10px] font-bold text-gray-500">
+            <div className="text-[10px] font-bold text-gray-300">
               TARGET COIN
             </div>
             <input
@@ -102,7 +102,7 @@ export default function HoldingsTradeModal({
           </label>
 
           <label className="text-xs text-gray-300 space-y-1">
-            <div className="text-[10px] font-bold text-gray-500">
+            <div className="text-[10px] font-bold text-gray-300">
               AMOUNT ({unit})
             </div>
             <input
@@ -116,7 +116,7 @@ export default function HoldingsTradeModal({
           </label>
 
           <label className="text-xs text-gray-300 space-y-1">
-            <div className="text-[10px] font-bold text-gray-500">FROM COIN</div>
+            <div className="text-[10px] font-bold text-gray-300">FROM COIN</div>
             <select
               value={action === "SELL" ? targetSymbol : fromSymbol}
               onChange={(event) => setFromSymbol(event.target.value)}
@@ -135,7 +135,7 @@ export default function HoldingsTradeModal({
         </div>
 
         <div className="border-2 border-gray-700 p-3 text-xs text-gray-300">
-          <div className="text-[10px] font-bold text-gray-500 mb-1">
+          <div className="text-[10px] font-bold text-gray-300 mb-1">
             BEST VALUE RECOMMENDATION
           </div>
           <div>
@@ -143,12 +143,12 @@ export default function HoldingsTradeModal({
               ? `BEST FUNDING SOURCE: ${bestValueSymbol}.`
               : `SELL SOURCE: ${targetSymbol}.`}
           </div>
-          <div className="mt-1 text-gray-500">
+          <div className="mt-1 text-gray-300">
             {action === "BUY"
               ? `BUY FLOW: ${fromSymbol} → USDT → ${targetSymbol}`
               : `SELL FLOW: ${targetSymbol} → USDT`}
           </div>
-          <div className="mt-1 text-gray-500">DISPLAY CURRENCY: {currency}</div>
+          <div className="mt-1 text-gray-300">DISPLAY CURRENCY: {currency}</div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -156,7 +156,7 @@ export default function HoldingsTradeModal({
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="border-2 border-gray-600 px-3 py-1 text-xs font-bold text-gray-300 disabled:opacity-50"
+            className="border-2 border-gray-300 px-3 py-1 text-xs font-bold text-gray-300 disabled:opacity-50"
           >
             CANCEL
           </button>
@@ -171,7 +171,7 @@ export default function HoldingsTradeModal({
               })
             }
             disabled={disableSubmit}
-            className="border-2 border-white px-3 py-1 text-xs font-bold text-white hover:bg-white hover:text-black disabled:opacity-50"
+            className="border-2 border-gray-300 px-3 py-1 text-xs font-bold text-white hover:bg-white hover:text-black disabled:opacity-50"
           >
             {isSubmitting ? "EXECUTING..." : "CONFIRM TRADE"}
           </button>

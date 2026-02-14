@@ -124,7 +124,7 @@ export default function HomePage({
 
       {/* Main Border Frame */}
       <motion.div
-        className="absolute inset-4 border-4 border-white pointer-events-none"
+        className="absolute inset-4 border-4 border-gray-300 pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
@@ -162,7 +162,7 @@ export default function HomePage({
 
         {/* Red Accent Line */}
         <motion.div
-          className="w-full max-w-4xl h-1 bg-[#FF0000] mt-6"
+          className="w-full max-w-4xl h-1 bg-[#DD0000] mt-6"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
@@ -184,7 +184,7 @@ export default function HomePage({
           {["NVIDIA NIM", "NEWS ANALYSIS", "THREAT RADAR", "☕ COFFEE DRIVEN"].map((tag) => (
             <span
               key={tag}
-              className="border-2 border-gray-600 text-gray-400 px-3 py-1 text-xs tracking-widest"
+              className="border-2 border-gray-300 text-gray-300 px-3 py-1 text-xs tracking-widest"
             >
               {tag}
             </span>
@@ -194,8 +194,8 @@ export default function HomePage({
         {/* CTA Button */}
         <motion.button
           onClick={onAccountClick}
-          className="mt-12 border-4 border-[#FF0000] bg-[#121212] text-[#FF0000] px-12 py-4 font-bold text-lg tracking-widest
-                     hover:bg-[#FF0000] hover:text-white transition-all duration-100
+          className="mt-12 border-4 border-[#DD0000] bg-[#121212] text-[#DD0000] px-12 py-4 font-bold text-lg tracking-widest
+                     hover:bg-[#DD0000] hover:text-white transition-all duration-100
                      focus:outline-none"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -209,7 +209,7 @@ export default function HomePage({
           BOTTOM - INTELLIGENCE TICKER
           ═══════════════════════════════════════════════════════════ */}
       <motion.footer
-        className="absolute bottom-4 left-4 right-4 border-t-4 border-white bg-[#121212]"
+        className="absolute bottom-4 left-4 right-4 border-t-4 border-gray-300 bg-[#121212]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 0.5 }}
@@ -218,9 +218,9 @@ export default function HomePage({
           <div className="marquee-container">
             <div className="marquee-content">
               {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
-                <span key={index} className="mx-8 text-sm tracking-widest text-gray-400">
+                <span key={index} className="mx-8 text-sm tracking-widest text-gray-300">
                   {item}
-                  <span className="mx-4 text-[#FF0000]">•</span>
+                  <span className="mx-4 text-[#DD0000]">•</span>
                 </span>
               ))}
             </div>
@@ -230,25 +230,25 @@ export default function HomePage({
 
       {/* Corner Accents */}
       <motion.div
-        className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-[#FF0000]"
+        className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-[#DD0000]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2 }}
       />
       <motion.div
-        className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-[#FF0000]"
+        className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-[#DD0000]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.3 }}
       />
       <motion.div
-        className="absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 border-[#FF0000]"
+        className="absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 border-[#DD0000]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.4 }}
       />
       <motion.div
-        className="absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 border-[#FF0000]"
+        className="absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 border-[#DD0000]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5 }}

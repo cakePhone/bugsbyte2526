@@ -54,7 +54,7 @@ export default function CompositionPanel({ balanceUsdt, assets, totalValue, tota
       {/* Total Value */}
       <div className="border-b-4 border-black px-4 py-4 flex items-end justify-between">
         <div>
-          <div className="text-[10px] font-mono font-bold uppercase text-gray-500">
+          <div className="text-[10px] font-mono font-bold uppercase text-gray-300">
             TOTAL VALUE
           </div>
           <motion.div
@@ -67,7 +67,7 @@ export default function CompositionPanel({ balanceUsdt, assets, totalValue, tota
           </motion.div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] font-mono font-bold uppercase text-gray-500">P&amp;L</div>
+          <div className="text-[10px] font-mono font-bold uppercase text-gray-300">P&amp;L</div>
           <div
             className={`text-xl font-black font-mono ${
               totalPnL >= 0 ? 'text-black' : 'text-red-600'
@@ -82,7 +82,7 @@ export default function CompositionPanel({ balanceUsdt, assets, totalValue, tota
       <div className="border-b-2 border-black px-4 py-2 flex items-center justify-between bg-gray-50">
         <div className="flex items-center gap-3">
           <span className="font-black font-mono text-sm">USDT</span>
-          <span className="text-[10px] font-mono text-gray-500">STABLECOIN</span>
+          <span className="text-[10px] font-mono text-gray-300">STABLECOIN</span>
         </div>
         <div className="text-right">
           <span className="font-black font-mono text-sm">
@@ -94,7 +94,7 @@ export default function CompositionPanel({ balanceUsdt, assets, totalValue, tota
       {/* Asset table */}
       <table className="w-full text-left">
         <thead>
-          <tr className="border-b-4 border-black text-[10px] font-mono font-black uppercase text-gray-500">
+          <tr className="border-b-4 border-black text-[10px] font-mono font-black uppercase text-gray-300">
             <th className="px-4 py-2">ASSET</th>
             <th className="px-2 py-2 text-right">AMOUNT</th>
             <th className="px-2 py-2 text-right">VALUE</th>
@@ -105,7 +105,7 @@ export default function CompositionPanel({ balanceUsdt, assets, totalValue, tota
         <tbody>
           {assets.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-6 text-center font-mono text-gray-400 text-sm">
+              <td colSpan={5} className="px-4 py-6 text-center font-mono text-gray-300 text-sm">
                 NO HOLDINGS — START TRADING
               </td>
             </tr>

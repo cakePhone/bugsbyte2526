@@ -124,7 +124,7 @@ export default function WarRoom() {
             <div className="text-white font-mono text-2xl font-bold animate-pulse">
               DASHBOARD
             </div>
-            <div className="text-gray-500 font-mono text-sm">
+            <div className="text-gray-300 font-mono text-sm">
               LOADING USER DATA...
             </div>
             <div className="flex items-center justify-center gap-2">
@@ -146,21 +146,21 @@ export default function WarRoom() {
       {/* Dark Overlay for 30% more darkness */}
       <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
 
-      <header className="border-b-4 border-white bg-black sticky top-0 z-40 relative">
+      <header className="border-b-4 border-gray-300 bg-black sticky top-0 z-40 relative">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-tighter text-white">
               ☕ GEISHA GAINS
             </h1>
-            <span className="text-[10px] font-bold border-2 border-white px-2 py-0.5 text-white hidden md:inline-block">
+            <span className="text-[10px] font-bold border-2 border-gray-300 px-2 py-0.5 text-white hidden md:inline-block">
               WAR ROOM
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="border-2 border-white px-3 py-1 flex items-center gap-2">
+            <div className="border-2 border-gray-300 px-3 py-1 flex items-center gap-2">
               <motion.div
-                className={`w-2 h-2 ${isLoading ? "bg-[#FF0000]" : "bg-green-400"}`}
+                className={`w-2 h-2 ${isLoading ? "bg-[#DD0000]" : "bg-green-400"}`}
                 animate={isLoading ? { scale: [1, 1.4, 1] } : {}}
                 transition={{ repeat: Infinity, duration: 0.3 }}
               />
@@ -172,18 +172,18 @@ export default function WarRoom() {
             <div className="hidden md:flex items-center gap-1">
               <span
                 className={`text-[9px] font-bold px-1.5 py-0.5 border ${profile.risk_tolerance === "AGGRESSIVE"
-                    ? "border-[#FF0000] text-[#FF0000]"
+                    ? "border-[#DD0000] text-[#DD0000]"
                     : profile.risk_tolerance === "MODERATE"
-                      ? "border-[#D4AF37] text-[#D4AF37]"
-                      : "border-gray-500 text-gray-400"
+                      ? "border-[#C9A832] text-[#C9A832]"
+                      : "border-gray-300 text-gray-300"
                   }`}
               >
                 {profile.risk_tolerance}
               </span>
               <span
                 className={`text-[9px] font-bold px-1.5 py-0.5 border ${profile.geopolitical_sensitivity === "PARANOID"
-                    ? "border-[#FF0000] text-[#FF0000]"
-                    : "border-gray-600 text-gray-500"
+                    ? "border-[#DD0000] text-[#DD0000]"
+                    : "border-gray-300 text-gray-300"
                   }`}
               >
                 {profile.geopolitical_sensitivity}
@@ -192,19 +192,19 @@ export default function WarRoom() {
 
             <button
               onClick={() => router.push("/settings")}
-              className="border-2 border-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#FF0000] hover:border-[#FF0000] hover:text-white transition-colors flex items-center gap-1"
+              className="border-2 border-gray-300 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#DD0000] hover:border-[#DD0000] hover:text-white transition-colors flex items-center gap-1"
             >
               ⚙️ BASE OF OPERATIONS
             </button>
             <button
               onClick={() => router.push("/fund")}
-              className="border-2 border-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors"
+              className="border-2 border-[#C9A832] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#C9A832] hover:bg-[#C9A832] hover:text-black transition-colors"
             >
               $ FUND ARMY
             </button>
             <button
               onClick={() => router.push("/strategy")}
-              className="border-2 border-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
+              className="border-2 border-gray-300 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
             >
               🧠 STRATEGY
             </button>
@@ -236,12 +236,12 @@ export default function WarRoom() {
           <div className="col-span-12 xl:col-span-8 space-y-4">
             <div>
               <ExchangeSpreadTable opportunities={opportunities} />
-              <div className="border-4 border-t-0 border-white bg-black px-4 py-2 flex items-center justify-between">
-                <span className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest">
+              <div className="border-4 border-t-0 border-gray-300 bg-black px-4 py-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold font-mono text-gray-300 uppercase tracking-widest">
                   ARBITRAGE SCANS: {arbitrageScanCount}
                 </span>
                 <span
-                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${arbitrageLoading ? "text-red-500" : "text-gray-400"
+                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${arbitrageLoading ? "text-red-500" : "text-gray-300"
                     }`}
                 >
                   {arbitrageLoading ? "SYNCING FEEDS..." : "LIVE"}
@@ -253,19 +253,19 @@ export default function WarRoom() {
           </div>
 
           <div className="col-span-12 xl:col-span-4">
-            <div className="border-4 border-white bg-black h-full max-h-[1000px] overflow-y-auto">
-              <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+            <div className="border-4 border-gray-300 bg-black h-full max-h-[1000px] overflow-y-auto">
+              <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-widest">
                   OPPORTUNITY HISTORY
                 </h3>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[10px] text-gray-300">
                   {opportunityHistory.length} EVENTS
                 </span>
               </div>
 
               <div>
                 {opportunityHistory.length === 0 ? (
-                  <div className="p-6 text-xs text-gray-500">
+                  <div className="p-6 text-xs text-gray-300">
                     WAITING FOR NET-PROFITABLE SPREADS...
                   </div>
                 ) : (
@@ -278,15 +278,15 @@ export default function WarRoom() {
                         <span className="font-bold text-white">
                           {item.symbol}
                         </span>
-                        <span className="text-[#D4AF37] font-bold">
+                        <span className="text-[#C9A832] font-bold">
                           {item.netSpreadPct >= 0 ? "+" : ""}
                           {item.netSpreadPct.toFixed(4)}%
                         </span>
                       </div>
-                      <div className="text-gray-400 mt-1">
+                      <div className="text-gray-300 mt-1">
                         BUY {item.buyExchange} → SELL {item.sellExchange}
                       </div>
-                      <div className="text-gray-500 mt-1">
+                      <div className="text-gray-300 mt-1">
                         est. {item.estimatedNetUsdPerUnit >= 0 ? "+" : ""}$
                         {item.estimatedNetUsdPerUnit.toFixed(4)} / unit
                       </div>
@@ -303,13 +303,13 @@ export default function WarRoom() {
 
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-12 lg:col-span-8">
-            <div className="border-4 border-white bg-black">
-              <div className="border-b-4 border-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="border-4 border-gray-300 bg-black">
+              <div className="border-b-4 border-gray-300 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   {selectedChartSymbols.map((symbol) => (
                     <span
                       key={symbol}
-                      className="border-2 border-white px-2 py-1 text-[10px] font-bold"
+                      className="border-2 border-gray-300 px-2 py-1 text-[10px] font-bold"
                     >
                       {symbol} • {displayCurrency === "EUR" ? "€" : "$"}
                       {(prices[symbol] || 0).toLocaleString(undefined, {
@@ -321,10 +321,10 @@ export default function WarRoom() {
                 </div>
 
                 <details className="relative">
-                  <summary className="list-none cursor-pointer border-2 border-white px-3 py-1 text-[10px] font-bold tracking-widest hover:bg-white hover:text-black transition-colors">
+                  <summary className="list-none cursor-pointer border-2 border-gray-300 px-3 py-1 text-[10px] font-bold tracking-widest hover:bg-white hover:text-black transition-colors">
                     SELECT COINS
                   </summary>
-                  <div className="absolute right-0 top-8 z-20 w-40 border-2 border-white bg-black p-2 space-y-2">
+                  <div className="absolute right-0 top-8 z-20 w-40 border-2 border-gray-300 bg-black p-2 space-y-2">
                     {availableCoins.map((coin) => {
                       const checked = selectedChartSymbols.includes(coin);
                       return (
@@ -353,8 +353,8 @@ export default function WarRoom() {
                       key={timeframe.key}
                       onClick={() => setActiveTimeframe(timeframe.key)}
                       className={`border-2 px-2 py-1 text-[10px] font-bold tracking-widest transition-colors ${activeTimeframe === timeframe.key
-                          ? "border-white bg-white text-black"
-                          : "border-gray-700 text-gray-400 hover:border-white hover:text-white"
+                          ? "border-gray-300 bg-white text-black"
+                          : "border-gray-700 text-gray-300 hover:border-gray-300 hover:text-white"
                         }`}
                     >
                       {timeframe.label}
@@ -363,7 +363,7 @@ export default function WarRoom() {
                 </div>
 
                 {chartLoading && (
-                  <div className="absolute top-16 right-6 z-10 text-[10px] font-bold text-gray-500">
+                  <div className="absolute top-16 right-6 z-10 text-[10px] font-bold text-gray-300">
                     LOADING HISTORY...
                   </div>
                 )}
@@ -433,9 +433,9 @@ export default function WarRoom() {
         </div>
       </main>
 
-      <footer className="border-t-4 border-white bg-black mt-8 relative z-10">
+      <footer className="border-t-4 border-gray-300 bg-black mt-8 relative z-10">
         <div className="max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase text-gray-500">
+          <span className="text-[10px] font-bold uppercase text-gray-300">
             COFFEE DRIVEN DEVELOPMENT • BUGSBYTE 2026
           </span>
           <span className="text-[10px] uppercase text-gray-600">

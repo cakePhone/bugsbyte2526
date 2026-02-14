@@ -19,7 +19,7 @@ export default function Error({
         <h2 className="text-red-500 font-mono text-xl mb-4">
           SYSTEM MALFUNCTION
         </h2>
-        <p className="text-gray-400 font-mono text-sm mb-6">
+        <p className="text-gray-300 font-mono text-sm mb-6">
           {error.message || 'An unexpected error occurred'}
         </p>
         <button

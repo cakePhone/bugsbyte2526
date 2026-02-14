@@ -68,6 +68,24 @@ export default function Home() {
         // Store profile locally too for quick access
         localStorage.setItem("geisha_risk_profile", JSON.stringify(profile));
 
+        // Save account to accounts list
+        const savedAccounts = localStorage.getItem("geisha_accounts");
+        let accounts: string[] = [];
+        if (savedAccounts) {
+          try {
+            accounts = JSON.parse(savedAccounts);
+          } catch (e) {
+            console.error("Failed to parse accounts:", e);
+          }
+        }
+        if (!accounts.includes(auth.email)) {
+          accounts.push(auth.email);
+          localStorage.setItem("geisha_accounts", JSON.stringify(accounts));
+        }
+
+        // Store credentials for account switching (encrypted would be better in production)
+        localStorage.setItem(`creds_${auth.email}`, JSON.stringify({ password: auth.password }));
+
         // Redirect to War Room
         router.push("/dashboard");
       } catch {
@@ -104,6 +122,24 @@ export default function Home() {
           JSON.stringify(data.user.riskProfile),
         );
       }
+
+      // Save account to accounts list
+      const savedAccounts = localStorage.getItem("geisha_accounts");
+      let accounts: string[] = [];
+      if (savedAccounts) {
+        try {
+          accounts = JSON.parse(savedAccounts);
+        } catch (e) {
+          console.error("Failed to parse accounts:", e);
+        }
+      }
+      if (!accounts.includes(loginEmail)) {
+        accounts.push(loginEmail);
+        localStorage.setItem("geisha_accounts", JSON.stringify(accounts));
+      }
+
+      // Store credentials for account switching (encrypted would be better in production)
+      localStorage.setItem(`creds_${loginEmail}`, JSON.stringify({ password: loginPassword }));
 
       // Redirect to War Room
       router.push("/dashboard");
@@ -177,10 +213,10 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md border-4 border-white bg-black text-white font-mono"
+              className="w-full max-w-md border-4 border-gray-300 bg-black text-white font-mono"
             >
               {/* Modal Header */}
-              <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+              <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
                 <span className="text-xs font-bold tracking-widest">
                   OPERATOR LOGIN
                 </span>
@@ -189,7 +225,7 @@ export default function Home() {
                     setShowLogin(false);
                     setShowLanding(true);
                   }}
-                  className="text-gray-500 hover:text-[#FF0000] text-lg font-bold transition-colors"
+                  className="text-gray-300 hover:text-[#DD0000] text-lg font-bold transition-colors"
                 >
                   ✕
                 </button>
@@ -197,12 +233,12 @@ export default function Home() {
 
               {/* Modal Body */}
               <div className="p-6 space-y-4">
-                <div className="text-[#FF0000] text-sm mb-4">
+                <div className="text-[#DD0000] text-sm mb-4">
                   {"> AUTHENTICATE TO ACCESS WAR ROOM."}
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                  <label className="block text-xs text-gray-300 mb-1 uppercase tracking-widest">
                     Email
                   </label>
                   <input
@@ -210,13 +246,13 @@ export default function Home() {
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="operator@geisha.gains"
-                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-gray-300 focus:outline-none transition-colors placeholder:text-gray-700"
                     onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                  <label className="block text-xs text-gray-300 mb-1 uppercase tracking-widest">
                     Password
                   </label>
                   <input
@@ -224,13 +260,13 @@ export default function Home() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-gray-300 focus:outline-none transition-colors placeholder:text-gray-700"
                     onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
                 </div>
 
                 {loginError && (
-                  <div className="text-[#FF0000] text-xs font-bold">
+                  <div className="text-[#DD0000] text-xs font-bold">
                     {"> ERROR: "}
                     {loginError}
                   </div>
@@ -239,7 +275,7 @@ export default function Home() {
                 <button
                   onClick={handleLogin}
                   disabled={submitting}
-                  className="w-full border-4 border-white bg-black text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full border-4 border-gray-300 bg-black text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? "AUTHENTICATING..." : "> SIGN IN"}
                 </button>
@@ -250,7 +286,7 @@ export default function Home() {
                       setShowLogin(false);
                       setShowOnboarding(true);
                     }}
-                    className="text-gray-500 hover:text-[#FF0000] text-xs tracking-widest transition-colors"
+                    className="text-gray-300 hover:text-[#DD0000] text-xs tracking-widest transition-colors"
                   >
                     NEW OPERATOR? [ CREATE ACCOUNT ]
                   </button>

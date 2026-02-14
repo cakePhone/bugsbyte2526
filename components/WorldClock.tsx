@@ -100,12 +100,12 @@ export default function WorldClock() {
 
   return (
     <>
-      <div className="fixed right-6 top-20 w-80 border-4 border-white bg-black overflow-hidden font-mono z-30">
+      <div className="fixed right-6 top-20 w-80 border-4 border-gray-300 bg-black overflow-hidden font-mono z-30">
         {/* Header */}
-        <div className="border-b-4 border-white px-4 py-3 flex items-center justify-between bg-black">
+        <div className="border-b-4 border-gray-300 px-4 py-3 flex items-center justify-between bg-black">
           <div className="flex items-center gap-2">
             <motion.div
-              className="w-2 h-2 bg-[#FF0000]"
+              className="w-2 h-2 bg-[#DD0000]"
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
             />
@@ -115,7 +115,7 @@ export default function WorldClock() {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="border-2 border-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
+            className="border-2 border-gray-300 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
           >
             + ADD
           </button>
@@ -141,7 +141,7 @@ export default function WorldClock() {
                     height="16" 
                     viewBox="0 0 12 16" 
                     fill="none" 
-                    className="text-gray-500"
+                    className="text-gray-300"
                   >
                     <circle cx="3" cy="4" r="1.5" fill="currentColor"/>
                     <circle cx="9" cy="4" r="1.5" fill="currentColor"/>
@@ -158,18 +158,18 @@ export default function WorldClock() {
                     </h4>
                     <button
                       onClick={() => removeClock(clock.id)}
-                      className="opacity-0 group-hover:opacity-100 text-[#FF0000] hover:text-white text-[11px] font-bold transition-opacity border border-transparent hover:border-white px-1"
+                      className="opacity-0 group-hover:opacity-100 text-[#DD0000] hover:text-white text-[11px] font-bold transition-opacity border border-transparent hover:border-gray-300 px-1"
                     >
                       ✕
                     </button>
                   </div>
-                  <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">
+                  <p className="text-gray-300 text-[10px] uppercase tracking-wider mb-2">
                     {clock.country}
                   </p>
                   <p className="text-white text-2xl font-bold font-mono tracking-tight">
                     {formatTime(clock.timezone)}
                   </p>
-                  <p className="text-gray-400 text-[10px] uppercase tracking-wider mt-1">
+                  <p className="text-gray-300 text-[10px] uppercase tracking-wider mt-1">
                     {formatDate(clock.timezone)}
                   </p>
                 </div>
@@ -182,15 +182,15 @@ export default function WorldClock() {
       {/* Add Clock Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="border-4 border-white bg-black w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col font-mono">
+          <div className="border-4 border-gray-300 bg-black w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col font-mono">
             {/* Modal Header */}
-            <div className="border-b-4 border-white px-6 py-3 flex items-center justify-between bg-black">
+            <div className="border-b-4 border-gray-300 px-6 py-3 flex items-center justify-between bg-black">
               <h2 className="text-white font-bold text-sm uppercase tracking-widest">
                 Add World Clock
               </h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="border-2 border-white text-white hover:bg-white hover:text-black w-7 h-7 flex items-center justify-center transition-colors font-bold text-sm"
+                className="border-2 border-gray-300 text-white hover:bg-white hover:text-black w-7 h-7 flex items-center justify-center transition-colors font-bold text-sm"
               >
                 ✕
               </button>
@@ -203,7 +203,7 @@ export default function WorldClock() {
                 placeholder="SEARCH CITIES OR COUNTRIES..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#1A1A1A] text-white px-4 py-3 border-2 border-gray-700 focus:border-white focus:outline-none transition-all font-bold text-[11px] uppercase tracking-wider placeholder:text-gray-600"
+                className="w-full bg-[#1A1A1A] text-white px-4 py-3 border-2 border-gray-700 focus:border-gray-300 focus:outline-none transition-all font-bold text-[11px] uppercase tracking-wider placeholder:text-gray-600"
               />
             </div>
 
@@ -218,8 +218,8 @@ export default function WorldClock() {
                       onClick={() => toggleClock(clock)}
                       className={`text-left p-3 border-2 transition-all ${
                         isSelected
-                          ? "bg-[#FF0000]/20 border-[#FF0000] hover:border-white hover:bg-[#FF0000]/30"
-                          : "bg-[#1A1A1A] border-gray-700 hover:border-white hover:bg-black"
+                          ? "bg-[#DD0000]/20 border-[#DD0000] hover:border-gray-300 hover:bg-[#DD0000]/30"
+                          : "bg-[#1A1A1A] border-gray-700 hover:border-gray-300 hover:bg-black"
                       }`}
                     >
                       <div className="flex items-start justify-between">
@@ -227,7 +227,7 @@ export default function WorldClock() {
                           <h3 className="text-white font-bold text-[11px] uppercase tracking-wide mb-1">
                             {clock.city}
                           </h3>
-                          <p className="text-gray-500 text-[9px] uppercase tracking-wider mb-2">
+                          <p className="text-gray-300 text-[9px] uppercase tracking-wider mb-2">
                             {clock.country}
                           </p>
                           <p className="text-white text-base font-bold font-mono tracking-tight">
@@ -235,7 +235,7 @@ export default function WorldClock() {
                           </p>
                         </div>
                         {isSelected && (
-                          <span className="text-[#FF0000] text-lg font-bold">✓</span>
+                          <span className="text-[#DD0000] text-lg font-bold">✓</span>
                         )}
                       </div>
                     </button>

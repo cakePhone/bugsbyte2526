@@ -209,7 +209,7 @@ export default function SuperpositionedChart({
             x={zone.x + zone.w / 2}
             y={PAD.top + 20}
             textAnchor="middle"
-            fill={zone.type === 'BUY' ? '#000' : '#FF0000'}
+            fill={zone.type === 'BUY' ? '#000' : '#DD0000'}
             fontFamily="monospace"
             fontWeight="900"
             fontSize="11"
@@ -245,14 +245,14 @@ export default function SuperpositionedChart({
           y1={data.resistanceY}
           x2={PAD.left + PLOT_W}
           y2={data.resistanceY}
-          stroke="#FF0000"
+          stroke="#DD0000"
           strokeWidth={3}
           strokeDasharray="12 6"
         />
         <text
           x={PAD.left + PLOT_W + 4}
           y={data.resistanceY + 4}
-          fill="#FF0000"
+          fill="#DD0000"
           fontFamily="monospace"
           fontWeight="900"
           fontSize="10"
@@ -296,7 +296,7 @@ export default function SuperpositionedChart({
                 y1={PAD.top + PLOT_H * pct}
                 x2={PAD.left + PLOT_W}
                 y2={PAD.top + PLOT_H * pct}
-                stroke="#FF0000"
+                stroke="#DD0000"
                 strokeWidth={1}
                 animate={{
                   y1: [PAD.top + PLOT_H * pct - 2, PAD.top + PLOT_H * pct + 2],
