@@ -191,46 +191,17 @@ export async function GET() {
     const snapshot = await runArbitrageAnalysis();
     const opportunities = snapshot.opportunities.map(toNetOpportunity);
 
-    let executedThisScan = [] as Array<{
+    // AUTO-EXECUTION DISABLED: Only return monitoring data, no auto-trades
+    const executedThisScan: Array<{
       buyTxId: string;
       sellTxId: string;
       symbol: string;
       pnl: number;
-    }>;
+    }> = [];
 
     if (session?.sub) {
       await ensureWallet(session.sub);
-
-      const executable = opportunities
-        .filter((opportunity) => opportunity.execution.shouldTrade)
-        .sort((a, b) => b.execution.netSpreadPct - a.execution.netSpreadPct)
-        .slice(0, MAX_TRADES_PER_SCAN);
-
-      for (const opportunity of executable) {
-        const { cheapest, highest } = getCheapestAndHighest(
-          opportunity.allQuotes,
-        );
-
-        const executed = await executeSimultaneousTrade({
-          userId: session.sub,
-          symbol: opportunity.symbol,
-          buyPrice: cheapest.ask,
-          sellPrice: highest.ask,
-          buyExchange: cheapest.exchange,
-          sellExchange: highest.exchange,
-          confidence: opportunity.aiVerdict.confidence,
-          netSpreadPct: opportunity.execution.netSpreadPct,
-        });
-
-        if (executed) {
-          executedThisScan.push({
-            buyTxId: executed.buyTx.id,
-            sellTxId: executed.sellTx.id,
-            symbol: opportunity.symbol,
-            pnl: +executed.pnl.toFixed(4),
-          });
-        }
-      }
+      // Auto-execution removed - user must manually execute trades
     }
 
     const recentOrders = session?.sub

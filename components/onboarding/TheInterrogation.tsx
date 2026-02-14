@@ -78,17 +78,6 @@ const QUESTIONS = [
     multi: false,
   },
   {
-    id: "focus_sectors",
-    prompt: "SELECT BATTLEGROUNDS.",
-    options: [
-      { value: "CRYPTO", label: "₿ CRYPTO", desc: "" },
-      { value: "STOCKS", label: "📈 STOCKS", desc: "" },
-      { value: "FOREX", label: "💱 FOREX", desc: "" },
-      { value: "COMMODITIES", label: "🛢️ COMMODITIES", desc: "" },
-    ],
-    multi: true,
-  },
-  {
     id: "geopolitical_sensitivity",
     prompt: "MACRO SENSITIVITY LEVEL.",
     options: [

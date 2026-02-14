@@ -39,15 +39,7 @@ const CHART_TYPES: { key: ChartType; label: string; icon: string }[] = [
   { key: "MOUNTAIN", label: "MOUNTAIN", icon: "▲" },
 ];
 
-// Popular stocks to include in search (Alpha Vantage supported)
-const POPULAR_STOCKS = [
-  "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK.B",
-  "JPM", "V", "UNH", "MA", "HD", "PG", "JNJ", "XOM", "BAC", "CVX",
-  "ABBV", "KO", "PFE", "MRK", "AVGO", "PEP", "COST", "TMO", "WMT",
-  "DIS", "CSCO", "ADBE", "NFLX", "CRM", "AMD", "INTC", "IBM", "ORCL",
-];
-
-/** Full catalog of supported assets: crypto + stocks */
+/** Full catalog of supported crypto assets (no stocks - buy/sell only supports crypto) */
 function useGlobalAssetCatalog() {
   const [allAssets, setAllAssets] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,19 +54,16 @@ function useGlobalAssetCatalog() {
         const coins: string[] = Array.isArray(data?.coins)
           ? data.coins.map((c: { symbol: string }) => c.symbol)
           : [];
-        // Merge crypto + popular stocks (deduplicate via Set then Array.from)
-        const mergedSet = new Set([...coins, ...POPULAR_STOCKS]);
-        setAllAssets(Array.from(mergedSet));
+        setAllAssets(coins);
       })
       .catch(() => {
         if (!cancelled) {
-          // Fallback list (crypto + stocks)
+          // Fallback list (crypto only)
           setAllAssets([
             "BTC", "ETH", "XRP", "SOL", "ADA", "DOGE", "LTC", "AVAX",
             "DOT", "MATIC", "LINK", "UNI", "ATOM", "FIL", "NEAR",
             "APE", "SAND", "MANA", "AAVE", "CRV", "COMP", "MKR",
             "SHIB", "ALGO", "FTM", "HBAR",
-            ...POPULAR_STOCKS,
           ]);
         }
       })

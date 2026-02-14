@@ -106,7 +106,7 @@ export default function IntelligenceExchangeBar({
 
   return (
     <div
-      className={`border-4 bg-black ${apiFailed ? "border-[#FF0000] animate-pulse" : isBuyMode ? "border-[#00FF88]" : "border-white"}`}
+      className={`border-4 bg-black w-full overflow-hidden ${apiFailed ? "border-[#FF0000] animate-pulse" : isBuyMode ? "border-[#00FF88]" : "border-white"}`}
     >
       {/* Header - Clickable to toggle */}
       <div
