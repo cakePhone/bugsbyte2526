@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useWarRoom } from "@/contexts/WarRoomContext";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AmountPromptModal from "./AmountPromptModal";
 
 /**
@@ -56,11 +56,13 @@ export default function IntelligenceExchangeBar({
   const buySymbol = state.buyMode.symbol;
 
   // Auto-expand when buy mode is activated
-  const prevBuyModeRef = useState(isBuyMode);
-  if (isBuyMode && !prevBuyModeRef[0]) {
-    setIsCollapsed(false);
-  }
-  prevBuyModeRef[0] = isBuyMode;
+  const prevBuyModeRef = useRef(isBuyMode);
+  useEffect(() => {
+    if (isBuyMode && !prevBuyModeRef.current) {
+      setIsCollapsed(false);
+    }
+    prevBuyModeRef.current = isBuyMode;
+  }, [isBuyMode]);
 
   // Sort quotes by net price (lowest first)
   const sortedQuotes = [...quotes].sort(
@@ -179,163 +181,165 @@ export default function IntelligenceExchangeBar({
             className="overflow-hidden"
           >
             <div className="border-t-4 border-white overflow-x-auto">
-        <div className="flex min-w-max">
-          {sortedQuotes.length === 0 ? (
-            <div className="px-6 py-8 text-sm font-mono text-gray-600 uppercase">
-              {isBuyMode
-                ? "NO SELLERS AVAILABLE FOR THIS ASSET..."
-                : "NO EXCHANGE DATA AVAILABLE..."}
-            </div>
-          ) : (
-            sortedQuotes.map((quote, index) => {
-              const isGreenBean = quote.exchange === greenBeanExchange;
-              const rank = index + 1;
+              <div className="flex min-w-max">
+                {sortedQuotes.length === 0 ? (
+                  <div className="px-6 py-8 text-sm font-mono text-gray-600 uppercase">
+                    {isBuyMode
+                      ? "NO SELLERS AVAILABLE FOR THIS ASSET..."
+                      : "NO EXCHANGE DATA AVAILABLE..."}
+                  </div>
+                ) : (
+                  sortedQuotes.map((quote, index) => {
+                    const isGreenBean = quote.exchange === greenBeanExchange;
+                    const rank = index + 1;
 
-              return (
-                <motion.div
-                  key={`${quote.exchange}-${quote.symbol}`}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`relative border-r-4 p-4 min-w-[220px] transition-colors cursor-pointer ${
-                    isBuyMode
-                      ? isGreenBean
-                        ? "border-[#00FF88] bg-[#00FF88]/10 hover:bg-[#00FF88]/20"
-                        : "border-white hover:bg-gray-900"
-                      : isGreenBean
-                        ? "border-white bg-[#FF0000]/10 hover:bg-gray-900"
-                        : "border-white bg-black hover:bg-gray-900"
-                  }`}
-                  onClick={() => handleExecute(quote.exchange, quote.symbol)}
-                >
-                  {/* Green Bean / Best Deal Indicator */}
-                  {isGreenBean && (
-                    <>
-                      <div
-                        className={`absolute top-0 left-0 w-0 h-0 border-l-[20px] border-t-[20px] border-r-[20px] border-b-[20px] border-r-transparent border-b-transparent ${
+                    return (
+                      <motion.div
+                        key={`${quote.exchange}-${quote.symbol}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`relative border-r-4 p-4 min-w-[220px] transition-colors cursor-pointer ${
                           isBuyMode
-                            ? "border-l-[#00FF88] border-t-[#00FF88]"
-                            : "border-l-[#FF0000] border-t-[#FF0000]"
+                            ? isGreenBean
+                              ? "border-[#00FF88] bg-[#00FF88]/10 hover:bg-[#00FF88]/20"
+                              : "border-white hover:bg-gray-900"
+                            : isGreenBean
+                              ? "border-white bg-[#FF0000]/10 hover:bg-gray-900"
+                              : "border-white bg-black hover:bg-gray-900"
                         }`}
-                      />
-                      <span className="absolute top-0 left-0 text-[6px] font-black font-mono text-white ml-0.5 mt-0.5">
-                        #1
-                      </span>
-                    </>
-                  )}
-
-                  {/* Rank Badge */}
-                  <div className="absolute top-2 right-2">
-                    <span
-                      className={`text-[10px] font-black font-mono ${
-                        isGreenBean
-                          ? isBuyMode
-                            ? "text-[#00FF88]"
-                            : "text-[#FF0000]"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      RANK {rank}
-                    </span>
-                  </div>
-
-                  {/* Exchange/Seller Name */}
-                  <div className="mb-3 mt-1">
-                    <span className="text-lg font-black font-mono text-white uppercase tracking-wider">
-                      {quote.sellerName || quote.exchange}
-                    </span>
-                    {isGreenBean && (
-                      <span
-                        className={`ml-2 text-[8px] font-black font-mono px-1 py-0.5 border ${
-                          isBuyMode
-                            ? "text-[#00FF88] bg-[#00FF88]/20 border-[#00FF88]"
-                            : "text-[#FF0000] bg-[#FF0000]/20 border-[#FF0000]"
-                        }`}
+                        onClick={() =>
+                          handleExecute(quote.exchange, quote.symbol)
+                        }
                       >
-                        {isBuyMode ? "🎯 BEST DEAL" : "☕ GREEN BEAN"}
-                      </span>
-                    )}
-                  </div>
+                        {/* Green Bean / Best Deal Indicator */}
+                        {isGreenBean && (
+                          <>
+                            <div
+                              className={`absolute top-0 left-0 w-0 h-0 border-l-[20px] border-t-[20px] border-r-[20px] border-b-[20px] border-r-transparent border-b-transparent ${
+                                isBuyMode
+                                  ? "border-l-[#00FF88] border-t-[#00FF88]"
+                                  : "border-l-[#FF0000] border-t-[#FF0000]"
+                              }`}
+                            />
+                            <span className="absolute top-0 left-0 text-[6px] font-black font-mono text-white ml-0.5 mt-0.5">
+                              #1
+                            </span>
+                          </>
+                        )}
 
-                  {/* Symbol */}
-                  <div className="text-[10px] font-mono text-gray-500 mb-2 uppercase">
-                    {quote.symbol}
-                  </div>
+                        {/* Rank Badge */}
+                        <div className="absolute top-2 right-2">
+                          <span
+                            className={`text-[10px] font-black font-mono ${
+                              isGreenBean
+                                ? isBuyMode
+                                  ? "text-[#00FF88]"
+                                  : "text-[#FF0000]"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            RANK {rank}
+                          </span>
+                        </div>
 
-                  {/* Net Price After Tax */}
-                  <div className="border-t-2 border-gray-800 pt-2 mb-2">
-                    <div className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
-                      NET_PRICE_AFTER_TAX
-                    </div>
-                    <div
-                      className={`text-xl font-black font-mono ${
-                        isGreenBean ? "text-[#D4AF37]" : "text-white"
-                      }`}
-                    >
-                      $
-                      {quote.netPriceAfterTax.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-                  </div>
+                        {/* Exchange/Seller Name */}
+                        <div className="mb-3 mt-1">
+                          <span className="text-lg font-black font-mono text-white uppercase tracking-wider">
+                            {quote.sellerName || quote.exchange}
+                          </span>
+                          {isGreenBean && (
+                            <span
+                              className={`ml-2 text-[8px] font-black font-mono px-1 py-0.5 border ${
+                                isBuyMode
+                                  ? "text-[#00FF88] bg-[#00FF88]/20 border-[#00FF88]"
+                                  : "text-[#FF0000] bg-[#FF0000]/20 border-[#FF0000]"
+                              }`}
+                            >
+                              {isBuyMode ? "🎯 BEST DEAL" : "☕ GREEN BEAN"}
+                            </span>
+                          )}
+                        </div>
 
-                  {/* Details Grid */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-mono">
-                      <span className="text-gray-600">ASK</span>
-                      <span className="text-gray-400">
-                        $
-                        {quote.askPrice.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[9px] font-mono">
-                      <span className="text-gray-600">TAX</span>
-                      <span className="text-gray-400">
-                        {quote.taxRate.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[9px] font-mono">
-                      <span className="text-gray-600">WITHDRAWAL</span>
-                      <span className="text-gray-400">
-                        ${quote.withdrawalFee.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                        {/* Symbol */}
+                        <div className="text-[10px] font-mono text-gray-500 mb-2 uppercase">
+                          {quote.symbol}
+                        </div>
 
-                  {/* Execution Speed */}
-                  <div className="border-t-2 border-gray-800 pt-2 mt-2">
-                    <div className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
-                      EXECUTION_SPEED
-                    </div>
-                    <div
-                      className={`text-sm font-black font-mono ${getSpeedColor(quote.executionSpeed)}`}
-                    >
-                      {quote.executionSpeed}{" "}
-                      <span className="text-[10px] text-gray-500">
-                        {getSpeedLabel(quote.executionSpeed)}
-                      </span>
-                    </div>
-                  </div>
+                        {/* Net Price After Tax */}
+                        <div className="border-t-2 border-gray-800 pt-2 mb-2">
+                          <div className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
+                            NET_PRICE_AFTER_TAX
+                          </div>
+                          <div
+                            className={`text-xl font-black font-mono ${
+                              isGreenBean ? "text-[#D4AF37]" : "text-white"
+                            }`}
+                          >
+                            $
+                            {quote.netPriceAfterTax.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}
+                          </div>
+                        </div>
 
-                  {/* Buy Mode CTA */}
-                  {isBuyMode && (
-                    <div className="border-t-2 border-gray-800 pt-2 mt-2">
-                      <div
-                        className={`text-center text-xs font-black font-mono uppercase py-1 ${
-                          isGreenBean ? "text-[#00FF88]" : "text-gray-500"
-                        }`}
-                      >
-                        CLICK TO BUY →
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })
-          )}
-        </div>
+                        {/* Details Grid */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-mono">
+                            <span className="text-gray-600">ASK</span>
+                            <span className="text-gray-400">
+                              $
+                              {quote.askPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-[9px] font-mono">
+                            <span className="text-gray-600">TAX</span>
+                            <span className="text-gray-400">
+                              {quote.taxRate.toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-[9px] font-mono">
+                            <span className="text-gray-600">WITHDRAWAL</span>
+                            <span className="text-gray-400">
+                              ${quote.withdrawalFee.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Execution Speed */}
+                        <div className="border-t-2 border-gray-800 pt-2 mt-2">
+                          <div className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
+                            EXECUTION_SPEED
+                          </div>
+                          <div
+                            className={`text-sm font-black font-mono ${getSpeedColor(quote.executionSpeed)}`}
+                          >
+                            {quote.executionSpeed}{" "}
+                            <span className="text-[10px] text-gray-500">
+                              {getSpeedLabel(quote.executionSpeed)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Buy Mode CTA */}
+                        {isBuyMode && (
+                          <div className="border-t-2 border-gray-800 pt-2 mt-2">
+                            <div
+                              className={`text-center text-xs font-black font-mono uppercase py-1 ${
+                                isGreenBean ? "text-[#00FF88]" : "text-gray-500"
+                              }`}
+                            >
+                              CLICK TO BUY →
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </motion.div>
         )}
