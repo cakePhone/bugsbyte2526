@@ -99,8 +99,20 @@ export default function StrategyAnalysisPage() {
 
   if (!authChecked && loading) {
     return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center text-gray-500 font-mono text-sm">
-        LOADING STRATEGY ANALYSIS...
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-white font-mono text-2xl font-bold animate-pulse">
+            STRATEGY
+          </div>
+          <div className="text-gray-500 font-mono text-sm">
+            LOADING STRATEGY ANALYSIS...
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-white animate-ping"></div>
+            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.4s' }}></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -209,10 +221,9 @@ export default function StrategyAnalysisPage() {
                     </td>
                     <td className="px-3 py-2">
                       <span
-                        className={`border px-1.5 py-0.5 font-bold ${
-                          typeStyles[tx.type as keyof typeof typeStyles] ||
+                        className={`border px-1.5 py-0.5 font-bold ${typeStyles[tx.type as keyof typeof typeStyles] ||
                           "border-gray-600 text-gray-400"
-                        }`}
+                          }`}
                       >
                         {tx.type}
                       </span>
@@ -231,13 +242,12 @@ export default function StrategyAnalysisPage() {
                       })}
                     </td>
                     <td
-                      className={`px-3 py-2 text-right font-bold ${
-                        tx.pnl === null
+                      className={`px-3 py-2 text-right font-bold ${tx.pnl === null
                           ? "text-gray-500"
                           : tx.pnl >= 0
                             ? "text-green-400"
                             : "text-[#FF0000]"
-                      }`}
+                        }`}
                     >
                       {tx.pnl === null
                         ? "-"

@@ -119,8 +119,20 @@ export default function WarRoom() {
       <div className="min-h-screen bg-[#121212] flex items-center justify-center relative">
         <ClientBackground />
         <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
-        <div className="text-gray-500 font-mono text-sm relative z-10">
-          LOADING PROFILE...
+        <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="text-white font-mono text-2xl font-bold animate-pulse">
+              DASHBOARD
+            </div>
+            <div className="text-gray-500 font-mono text-sm">
+              LOADING USER DATA...
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-white animate-ping"></div>
+              <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -130,10 +142,10 @@ export default function WarRoom() {
     <div className="min-h-screen bg-[#121212] text-white font-mono relative">
       {/* Interactive PixelBlast Background */}
       <ClientBackground />
-      
+
       {/* Dark Overlay for 30% more darkness */}
       <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
-      
+
       <header className="border-b-4 border-white bg-black sticky top-0 z-40 relative">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -159,22 +171,20 @@ export default function WarRoom() {
 
             <div className="hidden md:flex items-center gap-1">
               <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                  profile.risk_tolerance === "AGGRESSIVE"
+                className={`text-[9px] font-bold px-1.5 py-0.5 border ${profile.risk_tolerance === "AGGRESSIVE"
                     ? "border-[#FF0000] text-[#FF0000]"
                     : profile.risk_tolerance === "MODERATE"
                       ? "border-[#D4AF37] text-[#D4AF37]"
                       : "border-gray-500 text-gray-400"
-                }`}
+                  }`}
               >
                 {profile.risk_tolerance}
               </span>
               <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                  profile.geopolitical_sensitivity === "PARANOID"
+                className={`text-[9px] font-bold px-1.5 py-0.5 border ${profile.geopolitical_sensitivity === "PARANOID"
                     ? "border-[#FF0000] text-[#FF0000]"
                     : "border-gray-600 text-gray-500"
-                }`}
+                  }`}
               >
                 {profile.geopolitical_sensitivity}
               </span>
@@ -231,9 +241,8 @@ export default function WarRoom() {
                   ARBITRAGE SCANS: {arbitrageScanCount}
                 </span>
                 <span
-                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${
-                    arbitrageLoading ? "text-red-500" : "text-gray-400"
-                  }`}
+                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${arbitrageLoading ? "text-red-500" : "text-gray-400"
+                    }`}
                 >
                   {arbitrageLoading ? "SYNCING FEEDS..." : "LIVE"}
                 </span>
@@ -343,11 +352,10 @@ export default function WarRoom() {
                     <button
                       key={timeframe.key}
                       onClick={() => setActiveTimeframe(timeframe.key)}
-                      className={`border-2 px-2 py-1 text-[10px] font-bold tracking-widest transition-colors ${
-                        activeTimeframe === timeframe.key
+                      className={`border-2 px-2 py-1 text-[10px] font-bold tracking-widest transition-colors ${activeTimeframe === timeframe.key
                           ? "border-white bg-white text-black"
                           : "border-gray-700 text-gray-400 hover:border-white hover:text-white"
-                      }`}
+                        }`}
                     >
                       {timeframe.label}
                     </button>

@@ -196,8 +196,18 @@ export default function BaseOfOperations() {
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-        <div className="text-gray-500 font-mono text-sm animate-pulse">
-          LOADING...
+        <div className="text-center space-y-4">
+          <div className="text-white font-mono text-2xl font-bold animate-pulse">
+            ⚙️ BASE OF OPERATIONS
+          </div>
+          <div className="text-gray-500 font-mono text-sm">
+            LOADING CONFIGURATION...
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-white animate-ping"></div>
+            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.4s' }}></div>
+          </div>
         </div>
       </div>
     );
