@@ -141,29 +141,24 @@ export default function NewsPage() {
 
           {/* Category Filters */}
           <div className="flex items-center h-full border-l-4 border-white">
-            {(["all", "breaking", "bitcoin", "defi"] as NewsCategory[]).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => handleCategoryChange(cat)}
-                className={`h-full px-3 text-[10px] font-black uppercase tracking-wider transition-colors ${
-                  category === cat
-                    ? "bg-[#FF0000] text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
-              >
-                {cat === "all" ? "ALL" : cat.toUpperCase()}
-              </button>
-            ))}
+            {(["all", "breaking", "bitcoin", "defi"] as NewsCategory[]).map((cat) => {
+              const isActive = category === cat;
+              const baseClasses = "h-full px-3 text-[10px] font-black uppercase tracking-wider transition-colors";
+              const activeClasses = "bg-[#FF0000] text-white";
+              const inactiveClasses = "text-zinc-400 hover:text-white hover:bg-zinc-800";
+              const buttonClasses = `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`;
+              
+              return (
+                <button
+                  key={cat}
+                  onClick={() => handleCategoryChange(cat)}
+                  className={buttonClasses}
+                >
+                  {cat === "all" ? "ALL" : cat.toUpperCase()}
+                </button>
+              );
+            })}
           </div>
-
-          {/* Refresh Button */}
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="h-full border-l-4 border-white px-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#FF0000] transition-colors disabled:opacity-50"
-          >
-            {loading ? "[ LOADING... ]" : "[ REFRESH ]"}
-          </button>
 
           {/* Navigation */}
           <nav className="flex items-center h-full">
@@ -196,8 +191,17 @@ export default function NewsPage() {
             CATEGORY: <span className="text-[#FF0000] uppercase">{category}</span>
           </span>
         </div>
-        <div className="text-zinc-500">
-          LAST UPDATE: <span className="text-white">{lastUpdate || "--:--:--"}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-500">
+            LAST UPDATE: <span className="text-white">{lastUpdate || "--:--:--"}</span>
+          </span>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="border-2 border-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white hover:bg-[#FF0000] hover:border-[#FF0000] transition-colors disabled:opacity-50"
+          >
+            {loading ? "LOADING" : "REFRESH"}
+          </button>
         </div>
       </div>
 
