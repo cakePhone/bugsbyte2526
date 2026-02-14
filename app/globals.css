@@ -230,6 +230,29 @@ input:focus, button:focus {
   .tag-ghost {
     @apply tag border-gray-600 text-gray-400;
   }
+
+  /* ── Marquee Animation ─────────────────────────────────── */
+  .marquee-container {
+    @apply relative overflow-hidden whitespace-nowrap;
+  }
+
+  .marquee-content {
+    @apply inline-flex animate-marquee;
+  }
+}
+
+/* ── Marquee Keyframes ─────────────────────────────────────── */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
 }
 
 @layer base {

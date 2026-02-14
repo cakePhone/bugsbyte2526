@@ -1,9 +1,9 @@
 /**
- * Home Page — The Interrogation (Onboarding) + Auth
+ * Home Page — Brutalist Landing + Onboarding + Auth
  * Geisha Gains • Coffee Driven Development
  *
+ * 16:9 full-screen landing page with brutalist aesthetic.
  * Profiles the user's trading psychology before entering the War Room.
- * Final onboarding step creates account. Login available for returning users.
  */
 
 "use client";
@@ -12,11 +12,14 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TheInterrogation from "@/components/onboarding/TheInterrogation";
+import HomePage from "@/components/home/HomePage";
 import type { RiskProfile } from "@/components/onboarding/TheInterrogation";
 
 export default function Home() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [showLanding, setShowLanding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginEmail, setLoginEmail] = useState("");
@@ -110,6 +113,22 @@ export default function Home() {
     }
   }, [loginEmail, loginPassword, router]);
 
+  // Handle navigation from landing page
+  const handleAccountClick = useCallback(() => {
+    setShowLanding(false);
+    setShowOnboarding(true);
+  }, []);
+
+  const handleDashboardClick = useCallback(() => {
+    setShowLanding(false);
+    setShowLogin(true);
+  }, []);
+
+  const handleBulletinClick = useCallback(() => {
+    // Future: Navigate to bulletin/news page
+    alert("BULLETIN: Coming soon...");
+  }, []);
+
   // Loading state
   if (checking) {
     return (
@@ -121,12 +140,28 @@ export default function Home() {
     );
   }
 
+  // Show Landing Page first
+  if (showLanding && !showOnboarding && !showLogin) {
+    return (
+      <HomePage
+        onAccountClick={handleAccountClick}
+        onDashboardClick={handleDashboardClick}
+        onBulletinClick={handleBulletinClick}
+      />
+    );
+  }
+
   return (
     <>
-      <TheInterrogation
-        onComplete={handleComplete}
-        onLoginClick={() => setShowLogin(true)}
-      />
+      {showOnboarding && (
+        <TheInterrogation
+          onComplete={handleComplete}
+          onLoginClick={() => {
+            setShowOnboarding(false);
+            setShowLogin(true);
+          }}
+        />
+      )}
 
       {/* ── LOGIN MODAL ── */}
       <AnimatePresence>
@@ -135,8 +170,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-            onClick={() => setShowLogin(false)}
+            className="fixed inset-0 z-50 bg-[#121212] flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -151,8 +185,11 @@ export default function Home() {
                   OPERATOR LOGIN
                 </span>
                 <button
-                  onClick={() => setShowLogin(false)}
-                  className="text-gray-500 hover:text-white text-lg font-bold"
+                  onClick={() => {
+                    setShowLogin(false);
+                    setShowLanding(true);
+                  }}
+                  className="text-gray-500 hover:text-[#FF0000] text-lg font-bold transition-colors"
                 >
                   ✕
                 </button>
@@ -206,6 +243,18 @@ export default function Home() {
                 >
                   {submitting ? "AUTHENTICATING..." : "> SIGN IN"}
                 </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => {
+                      setShowLogin(false);
+                      setShowOnboarding(true);
+                    }}
+                    className="text-gray-500 hover:text-[#FF0000] text-xs tracking-widest transition-colors"
+                  >
+                    NEW OPERATOR? [ CREATE ACCOUNT ]
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
