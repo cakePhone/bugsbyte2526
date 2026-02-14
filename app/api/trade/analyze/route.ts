@@ -4,7 +4,7 @@
  *
  * POST /api/trade/analyze
  *
- * Fetches prices from Uphold, analyzes with NVIDIA NIM,
+ * Fetches prices from the shared market service, analyzes with NVIDIA NIM,
  * and executes trades based on confidence or Overdrive state
  */
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Fetch real-time prices from Uphold
+    // 1. Fetch real-time prices from shared market service
     const supported = await getAvailableSymbols({ limit: 200 });
     const marketPrices = await fetchAllPrices(supported);
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
             price: price.price,
             volume24h: price.volume24h,
             change24h: price.change24h,
-            source: "uphold",
+            source: "price-service",
           },
         }),
       ),

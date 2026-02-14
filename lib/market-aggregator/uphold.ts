@@ -1,9 +1,11 @@
 /**
- * Geisha Gains - Uphold Exchange Fetcher
+ * Geisha Gains - Primary Exchange Fetcher
  * Coffee Driven Development - BugsByte 2026
  *
- * Fetches BTC-USDT order book price from the Uphold public API.
+ * Fetches BTC-USDT price from internal shared price service.
  */
+
+import { fetchAllPrices } from "@/lib/uphold-api";
 
 export interface ExchangePrice {
   exchange: string;
@@ -14,31 +16,24 @@ export interface ExchangePrice {
   timestamp: number;
 }
 
-const UPHOLD_API_BASE = "https://api.uphold.com/v0";
-
 /**
- * Fetch the BTC-USD ticker from Uphold and return a normalised ExchangePrice.
- * Uphold doesn't list a native BTC-USDT pair, so we use BTC-USD as the
- * closest equivalent (USDT ≈ 1 USD).
+ * Backward-compatible export name used by the aggregator.
  */
 export async function fetchUpholdPrice(): Promise<ExchangePrice> {
-  const res = await fetch(`${UPHOLD_API_BASE}/ticker/BTC-USD`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
+  const prices = await fetchAllPrices(["BTC"]);
+  const btc = prices.find((entry) => entry.symbol === "BTC");
+  const mid = Number(btc?.price || 0);
 
-  if (!res.ok) {
-    throw new Error(`Uphold API responded with ${res.status}`);
+  if (!Number.isFinite(mid) || mid <= 0) {
+    throw new Error("Primary price feed returned invalid BTC price");
   }
 
-  const data: { ask: string; bid: string; currency: string } = await res.json();
-
-  const ask = parseFloat(data.ask);
-  const bid = parseFloat(data.bid);
+  const spread = Math.max(mid * 0.0003, 0.5);
+  const ask = mid + spread;
+  const bid = Math.max(0, mid - spread);
 
   return {
-    exchange: "Uphold",
+    exchange: "Primary",
     pair: "BTC/USDT",
     ask,
     bid,

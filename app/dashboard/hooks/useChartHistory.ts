@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   ChartTimeframe,
   ChartTimeframeOption,
@@ -34,17 +34,72 @@ const TIMEFRAME_TO_BINANCE: Record<
   "1Y": { interval: "1d", limit: 365 },
 };
 
+const TIMEFRAME_TO_WINDOW_MS: Record<ChartTimeframe, number> = {
+  "1M": 1 * 60 * 1000,
+  "5M": 5 * 60 * 1000,
+  "30MIN": 30 * 60 * 1000,
+  "1H": 1 * 60 * 60 * 1000,
+  "24H": 24 * 60 * 60 * 1000,
+  "7D": 7 * 24 * 60 * 60 * 1000,
+  "30D": 30 * 24 * 60 * 60 * 1000,
+  "1Y": 365 * 24 * 60 * 60 * 1000,
+};
+
 // Known crypto symbols - Alpha Vantage treats others as stocks
 const CRYPTO_SYMBOLS = new Set([
-  "BTC", "ETH", "XRP", "SOL", "ADA", "DOGE", "LTC", "AVAX",
-  "DOT", "MATIC", "LINK", "UNI", "ATOM", "FIL", "NEAR",
-  "APE", "SAND", "MANA", "AAVE", "CRV", "COMP", "MKR",
-  "SHIB", "ALGO", "FTM", "HBAR", "BNB", "XLM", "TRX",
-  "USDT", "USDC", "DAI", "BUSD"
+  "BTC",
+  "ETH",
+  "XRP",
+  "SOL",
+  "ADA",
+  "DOGE",
+  "LTC",
+  "AVAX",
+  "DOT",
+  "MATIC",
+  "LINK",
+  "UNI",
+  "ATOM",
+  "FIL",
+  "NEAR",
+  "APE",
+  "SAND",
+  "MANA",
+  "AAVE",
+  "CRV",
+  "COMP",
+  "MKR",
+  "SHIB",
+  "ALGO",
+  "FTM",
+  "HBAR",
+  "BNB",
+  "XLM",
+  "TRX",
+  "USDT",
+  "USDC",
+  "DAI",
+  "BUSD",
 ]);
 
 function isCryptoSymbol(symbol: string): boolean {
   return CRYPTO_SYMBOLS.has(symbol.toUpperCase());
+}
+
+function applyTimeframeWindow(
+  points: PricePoint[],
+  timeframe: ChartTimeframe,
+): PricePoint[] {
+  const now = Date.now();
+  const windowMs = TIMEFRAME_TO_WINDOW_MS[timeframe];
+  if (!windowMs || points.length === 0) return points;
+
+  const cutoff = now - windowMs;
+  const clipped = points.filter((point) => point.timestamp >= cutoff);
+
+  if (clipped.length >= 2) return clipped;
+
+  return points.slice(-Math.min(points.length, 120));
 }
 
 export default function useChartHistory({
@@ -61,6 +116,23 @@ export default function useChartHistory({
   >({});
   const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>("24H");
   const [chartLoading, setChartLoading] = useState(false);
+
+  const selectedSymbolsSignature = selectedChartSymbols
+    .map((symbol) =>
+      String(symbol || "")
+        .toUpperCase()
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("|");
+
+  const stableSelectedSymbols = useMemo(
+    () =>
+      selectedSymbolsSignature
+        ? selectedSymbolsSignature.split("|")
+        : ([] as string[]),
+    [selectedSymbolsSignature],
+  );
 
   const fetchHistory = useCallback(
     async (symbol: string, timeframe: ChartTimeframe) => {
@@ -79,21 +151,21 @@ export default function useChartHistory({
         const yfRes = await fetch(`/api/yf?${yfParams.toString()}`, {
           cache: "no-store",
         });
-        
+
         if (yfRes.ok) {
           const data = await yfRes.json();
           if (Array.isArray(data?.points) && data.points.length > 0) {
-            points = data.points.map(
-              (entry: { timestamp: number; price: number }) => ({
+            points = data.points
+              .map((entry: { timestamp: number; price: number }) => ({
                 timestamp: Number(entry.timestamp),
                 price: Number(entry.price),
-              }),
-            ).filter(
-              (entry: PricePoint) =>
-                Number.isFinite(entry.timestamp) &&
-                Number.isFinite(entry.price) &&
-                entry.price > 0,
-            );
+              }))
+              .filter(
+                (entry: PricePoint) =>
+                  Number.isFinite(entry.timestamp) &&
+                  Number.isFinite(entry.price) &&
+                  entry.price > 0,
+              );
           }
         }
 
@@ -152,7 +224,8 @@ export default function useChartHistory({
           }
         }
 
-        setPriceHistories((prev) => ({ ...prev, [symbol]: points }));
+        const windowedPoints = applyTimeframeWindow(points, timeframe);
+        setPriceHistories((prev) => ({ ...prev, [symbol]: windowedPoints }));
       } catch {
         // keep previous history
       }
@@ -162,12 +235,12 @@ export default function useChartHistory({
 
   const refreshHistory = useCallback(
     async (showLoading = false) => {
-      if (!authChecked || selectedChartSymbols.length === 0) return;
+      if (!authChecked || stableSelectedSymbols.length === 0) return;
 
       if (showLoading) setChartLoading(true);
       try {
         await Promise.all(
-          selectedChartSymbols.map((symbol) =>
+          stableSelectedSymbols.map((symbol) =>
             fetchHistory(symbol, activeTimeframe),
           ),
         );
@@ -175,7 +248,7 @@ export default function useChartHistory({
         if (showLoading) setChartLoading(false);
       }
     },
-    [activeTimeframe, authChecked, fetchHistory, selectedChartSymbols],
+    [activeTimeframe, authChecked, fetchHistory, stableSelectedSymbols],
   );
 
   useEffect(() => {
@@ -185,7 +258,7 @@ export default function useChartHistory({
   usePollingTask(
     useCallback(() => refreshHistory(false), [refreshHistory]),
     5000,
-    authChecked && selectedChartSymbols.length > 0,
+    authChecked && stableSelectedSymbols.length > 0,
   );
 
   return {

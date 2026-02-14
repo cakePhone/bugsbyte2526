@@ -1,25 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchAllPrices } from "@/lib/uphold-api";
+import { getLatestQuotePrices } from "@/lib/marketSnapshots";
 
 export const dynamic = "force-dynamic";
 
 type Quote = "USD" | "EUR";
-
-async function fetchUsdtEurRate(): Promise<number> {
-  try {
-    const res = await fetch("https://api.uphold.com/v0/ticker/USDT-EUR", {
-      cache: "no-store",
-    });
-    if (!res.ok) return 0.92;
-    const data = (await res.json()) as { ask?: string; bid?: string };
-    const ask = Number(data.ask || 0);
-    const bid = Number(data.bid || 0);
-    const mid = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
-    return Number.isFinite(mid) && mid > 0 ? mid : 0.92;
-  } catch {
-    return 0.92;
-  }
-}
 
 export async function GET(req: Request) {
   try {
@@ -44,20 +28,26 @@ export async function GET(req: Request) {
       );
     }
 
-    const prices = await fetchAllPrices(symbols);
-    const conversion = quote === "EUR" ? await fetchUsdtEurRate() : 1;
+    const snapshotPrices = await getLatestQuotePrices(
+      quote === "EUR" ? "EUR" : "USDT",
+    );
 
     const bySymbol = Object.fromEntries(
-      prices.map((price) => [
-        price.symbol,
-        {
-          symbol: price.symbol,
-          price: price.price * conversion,
-          change24h: price.change24h,
-          volume24h: price.volume24h,
-          timestamp: price.timestamp,
-        },
-      ]),
+      symbols.map((symbol) => {
+        const upper = symbol.toUpperCase();
+        const price = Number(snapshotPrices[upper] || 0);
+
+        return [
+          upper,
+          {
+            symbol: upper,
+            price,
+            change24h: 0,
+            volume24h: 0,
+            timestamp: Date.now(),
+          },
+        ];
+      }),
     );
 
     return NextResponse.json({
@@ -65,7 +55,7 @@ export async function GET(req: Request) {
       symbols,
       prices: bySymbol,
       timestamp: Date.now(),
-      source: "uphold-via-server",
+      source: "market-snapshots",
     });
   } catch (error) {
     console.error("[MARKET_TICKER]", error);

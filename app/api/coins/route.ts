@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       coins,
       count: coins.length,
-      source: "uphold",
+      source: "catalog",
       updatedAt: Date.now(),
     });
   } catch (error) {

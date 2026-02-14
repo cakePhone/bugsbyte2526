@@ -1,11 +1,13 @@
 /**
  * CRYPTO NEWS API ROUTE — V5 Tactical Intelligence
- * 
+ *
  * Fetches real-time crypto news from https://cryptocurrency.cv
  * Free, no API key required, 200+ sources
  */
 
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 
 // Response from the free crypto news API
 interface CryptoNewsApiArticle {
@@ -92,36 +94,79 @@ function extractSymbol(text: string): string {
 }
 
 // Generate tags from content and source
-function generateTags(title: string, description: string, source: string): string[] {
+function generateTags(
+  title: string,
+  description: string,
+  source: string,
+): string[] {
   const tags: string[] = [];
   const text = `${title} ${description}`.toLowerCase();
 
   // Category tags based on content
-  if (text.includes("defi") || text.includes("swap") || text.includes("yield") || text.includes("liquidity")) {
+  if (
+    text.includes("defi") ||
+    text.includes("swap") ||
+    text.includes("yield") ||
+    text.includes("liquidity")
+  ) {
     tags.push("DEFI");
   }
-  if (text.includes("nft") || text.includes("opensea") || text.includes("collectible")) {
+  if (
+    text.includes("nft") ||
+    text.includes("opensea") ||
+    text.includes("collectible")
+  ) {
     tags.push("NFT");
   }
   if (text.includes("bitcoin") || text.includes("btc")) {
     tags.push("BITCOIN");
   }
-  if (text.includes("ethereum") || text.includes("eth") || text.includes("layer 2") || text.includes("l2")) {
+  if (
+    text.includes("ethereum") ||
+    text.includes("eth") ||
+    text.includes("layer 2") ||
+    text.includes("l2")
+  ) {
     tags.push("ETHEREUM");
   }
-  if (text.includes("regulation") || text.includes("sec") || text.includes("law") || text.includes("legal")) {
+  if (
+    text.includes("regulation") ||
+    text.includes("sec") ||
+    text.includes("law") ||
+    text.includes("legal")
+  ) {
     tags.push("REGULATION");
   }
-  if (text.includes("etf") || text.includes("institutional") || text.includes("blackrock") || text.includes("grayscale")) {
+  if (
+    text.includes("etf") ||
+    text.includes("institutional") ||
+    text.includes("blackrock") ||
+    text.includes("grayscale")
+  ) {
     tags.push("INSTITUTIONAL");
   }
-  if (text.includes("hack") || text.includes("exploit") || text.includes("breach") || text.includes("security")) {
+  if (
+    text.includes("hack") ||
+    text.includes("exploit") ||
+    text.includes("breach") ||
+    text.includes("security")
+  ) {
     tags.push("SECURITY");
   }
-  if (text.includes("price") || text.includes("rally") || text.includes("surge") || text.includes("dump") || text.includes("crash")) {
+  if (
+    text.includes("price") ||
+    text.includes("rally") ||
+    text.includes("surge") ||
+    text.includes("dump") ||
+    text.includes("crash")
+  ) {
     tags.push("MARKET");
   }
-  if (text.includes("breaking") || text.includes("🚨") || text.includes("alert")) {
+  if (
+    text.includes("breaking") ||
+    text.includes("🚨") ||
+    text.includes("alert")
+  ) {
     tags.push("BREAKING");
   }
 
@@ -137,8 +182,18 @@ function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString);
     const months = [
-      "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-      "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
+      "JANUARY",
+      "FEBRUARY",
+      "MARCH",
+      "APRIL",
+      "MAY",
+      "JUNE",
+      "JULY",
+      "AUGUST",
+      "SEPTEMBER",
+      "OCTOBER",
+      "NOVEMBER",
+      "DECEMBER",
     ];
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   } catch {
@@ -160,17 +215,19 @@ function formatTime(dateString: string): string {
 
 // Generate unique ID from article
 function generateId(article: CryptoNewsApiArticle): string {
-  const hash = `${article.title}-${article.pubDate}`.split("").reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
+  const hash = `${article.title}-${article.pubDate}`
+    .split("")
+    .reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
   return Math.abs(hash).toString(36);
 }
 
 // Transform API response to our format
 function transformArticle(article: CryptoNewsApiArticle): TransformedArticle {
   const combined = `${article.title} ${article.description}`;
-  
+
   return {
     id: generateId(article),
     timestamp: formatTime(article.pubDate),
@@ -190,10 +247,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get("limit") || "20";
     const category = searchParams.get("category"); // bitcoin, defi, breaking, etc.
-    
+
     // Build API URL
     let apiUrl = `https://cryptocurrency.cv/api/news?limit=${limit}`;
-    
+
     // Use specialized endpoints for categories
     if (category === "bitcoin") {
       apiUrl = `https://cryptocurrency.cv/api/bitcoin?limit=${limit}`;
@@ -207,7 +264,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(apiUrl, {
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "User-Agent": "GeishaGains/1.0 WarRoom",
       },
       // Cache for 2 minutes
@@ -219,7 +276,7 @@ export async function GET(request: Request) {
     }
 
     const data: CryptoNewsApiResponse = await response.json();
-    
+
     // Transform articles to our format
     const transformedArticles = data.articles.map(transformArticle);
 
@@ -232,7 +289,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("[CRYPTO-NEWS] Error fetching news:", error);
-    
+
     // Return error response
     return NextResponse.json(
       {
@@ -240,7 +297,7 @@ export async function GET(request: Request) {
         error: error instanceof Error ? error.message : "Failed to fetch news",
         articles: [],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -14,6 +14,36 @@ type WalletCoin = string;
 
 const EPSILON = 1e-10;
 
+const SYMBOL_ALIASES: Record<string, string> = {
+  XBT: "BTC",
+};
+
+function normalizeWalletSymbol(input: unknown): WalletCoin {
+  const raw = String(input || "")
+    .trim()
+    .toUpperCase();
+  if (!raw) return "";
+
+  const base = raw.replace("/", "-").split("-")[0].trim();
+
+  return SYMBOL_ALIASES[base] || base;
+}
+
+function normalizeAssetBalances(input: unknown): Record<string, number> {
+  if (!input || typeof input !== "object") return {};
+
+  return Object.entries(input as Record<string, unknown>).reduce(
+    (acc, [key, value]) => {
+      const symbol = normalizeWalletSymbol(key);
+      const amount = Number(value);
+      if (!symbol || !Number.isFinite(amount) || amount <= 0) return acc;
+      acc[symbol] = (acc[symbol] || 0) + amount;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -22,11 +52,32 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const symbol = String(body?.symbol || "").toUpperCase() as WalletCoin;
+    const symbol = normalizeWalletSymbol(body?.symbol);
     const amountCoin = Number(body?.amountCoin);
 
+    if (!symbol) {
+      return NextResponse.json(
+        { error: "symbol is required." },
+        { status: 400 },
+      );
+    }
+
     const supportedCoins = await getAvailableSymbols({ limit: 200 });
-    if (!supportedCoins.includes(symbol)) {
+    const userWallet = await prisma.wallet.findUnique({
+      where: { userId: session.sub },
+      select: { assets: true },
+    });
+    const userAssets = normalizeAssetBalances(userWallet?.assets);
+    const userCoinWallet = await (prisma as any).coinWallet.findFirst({
+      where: { userId: session.sub, symbol },
+      select: { id: true },
+    });
+
+    const isSupported = supportedCoins.includes(symbol);
+    const userAlreadyOwns =
+      Number(userAssets[symbol] || 0) > EPSILON || Boolean(userCoinWallet);
+
+    if (!isSupported && !userAlreadyOwns) {
       return NextResponse.json(
         { error: "Unsupported coin. Select a supported asset." },
         { status: 400 },
@@ -60,10 +111,7 @@ export async function POST(req: Request) {
         },
       });
 
-      const assets =
-        typeof wallet.assets === "object" && wallet.assets !== null
-          ? (wallet.assets as Record<string, number>)
-          : {};
+      const assets = normalizeAssetBalances(wallet.assets);
 
       const db = tx as any;
       const coinWallets = await db.coinWallet.findMany({

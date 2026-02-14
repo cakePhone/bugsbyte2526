@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWarRoom } from "@/contexts/WarRoomContext";
 import { formatMoney } from "./formatting";
 import type { DisplayCurrency } from "./types";
+import AmountPromptModal from "./AmountPromptModal";
 
 /**
  * TACTICAL HOLDINGS — Left Sidebar Panel (V4)
- * 
+ *
  * 25% viewport width. Displays user assets from Prisma.
  * Clicking row slides out ACTION TRAY with BUY/SELL/PLAN commands.
  * Endangered assets pulse RED when threat level is high.
@@ -42,13 +43,23 @@ export default function TacticalHoldings({
   const { state, soloAsset, setBuyMode } = useWarRoom();
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
   const [planningAsset, setPlanningAsset] = useState<string | null>(null);
-  const [planResult, setPlanResult] = useState<{ symbol: string; verdict: string; confidence: number } | null>(null);
+  const [sellModal, setSellModal] = useState<{
+    isOpen: boolean;
+    symbol: string;
+    maxAmount: number;
+  }>({ isOpen: false, symbol: "", maxAmount: 0 });
+  const [planResult, setPlanResult] = useState<{
+    symbol: string;
+    verdict: string;
+    confidence: number;
+  } | null>(null);
   const trayRef = useRef<HTMLDivElement>(null);
 
   const entries = Object.entries(holdings).filter(([, amt]) => amt > 0);
-  
+
   const totalValue = entries.reduce((acc, [sym, amt]) => {
-    const serverValue = currency === "USD" ? holdingValuesUsdt[sym] : holdingValuesDisplay[sym];
+    const serverValue =
+      currency === "USD" ? holdingValuesUsdt[sym] : holdingValuesDisplay[sym];
     if (typeof serverValue === "number" && Number.isFinite(serverValue)) {
       return acc + serverValue;
     }
@@ -59,8 +70,8 @@ export default function TacticalHoldings({
 
   // Filter entries based on search query
   const filteredEntries = state.searchQuery
-    ? entries.filter(([sym]) => 
-        sym.toLowerCase().includes(state.searchQuery.toLowerCase())
+    ? entries.filter(([sym]) =>
+        sym.toLowerCase().includes(state.searchQuery.toLowerCase()),
       )
     : entries;
 
@@ -86,20 +97,34 @@ export default function TacticalHoldings({
   };
 
   // Handle SELL action
-  const handleSell = (sym: string, amt: number) => {
+  const handleSell = (sym: string, maxAmount: number) => {
+    setSellModal({
+      isOpen: true,
+      symbol: sym,
+      maxAmount,
+    });
+  };
+
+  const handleSellConfirm = (amount: number) => {
+    const { symbol, maxAmount } = sellModal;
+    if (!symbol) return;
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (amount > maxAmount) return;
+
+    setSellModal({ isOpen: false, symbol: "", maxAmount: 0 });
     setExpandedAsset(null);
-    onSellRequest?.(sym, amt);
+    onSellRequest?.(symbol, amount);
   };
 
   // Handle PLAN action (NIM AI Analysis)
   const handlePlan = async (sym: string) => {
     setPlanningAsset(sym);
     setPlanResult(null);
-    
+
     try {
       const currentPrice = prices[sym] || 0;
       const change24h = priceChanges24h[sym] || 0;
-      
+
       const res = await fetch("/api/nim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,11 +139,15 @@ export default function TacticalHoldings({
 
       if (res.ok) {
         const evaluation = await res.json();
-        const verdict = evaluation.action === "BUY" ? "BULLISH" : 
-                       evaluation.action === "SELL" ? "BEARISH" : "STABLE";
-        setPlanResult({ 
-          symbol: sym, 
-          verdict, 
+        const verdict =
+          evaluation.action === "BUY"
+            ? "BULLISH"
+            : evaluation.action === "SELL"
+              ? "BEARISH"
+              : "STABLE";
+        setPlanResult({
+          symbol: sym,
+          verdict,
           confidence: evaluation.confidence || 70,
           ...evaluation,
         });
@@ -134,7 +163,7 @@ export default function TacticalHoldings({
     } finally {
       setPlanningAsset(null);
     }
-    
+
     onPlanRequest?.(sym);
   };
 
@@ -169,15 +198,19 @@ export default function TacticalHoldings({
             </div>
           ) : (
             filteredEntries.map(([sym, amt]) => {
-              const value = currency === "USD" 
-                ? holdingValuesUsdt[sym] 
-                : holdingValuesDisplay[sym];
-              const displayValue = typeof value === "number" && Number.isFinite(value)
-                ? value
-                : amt * Number(prices[sym] || 0);
+              const value =
+                currency === "USD"
+                  ? holdingValuesUsdt[sym]
+                  : holdingValuesDisplay[sym];
+              const displayValue =
+                typeof value === "number" && Number.isFinite(value)
+                  ? value
+                  : amt * Number(prices[sym] || 0);
               const isThreatened = threatenedSymbols.has(sym);
               const change24h = priceChanges24h[sym] || 0;
-              const isLayerActive = state.layers.some((l) => l.symbol === sym && l.isPrimary);
+              const isLayerActive = state.layers.some(
+                (l) => l.symbol === sym && l.isPrimary,
+              );
               const isExpanded = expandedAsset === sym;
 
               return (
@@ -185,17 +218,23 @@ export default function TacticalHoldings({
                   key={sym}
                   layout
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ 
-                    opacity: 1, 
+                  animate={{
+                    opacity: 1,
                     x: 0,
-                    backgroundColor: isThreatened 
-                      ? ["rgba(255, 0, 0, 0)", "rgba(255, 0, 0, 0.3)", "rgba(255, 0, 0, 0)"]
-                      : "transparent"
+                    backgroundColor: isThreatened
+                      ? [
+                          "rgba(255, 0, 0, 0)",
+                          "rgba(255, 0, 0, 0.3)",
+                          "rgba(255, 0, 0, 0)",
+                        ]
+                      : "transparent",
                   }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ 
+                  transition={{
                     duration: 0.2,
-                    backgroundColor: isThreatened ? { repeat: Infinity, duration: 1.5 } : {}
+                    backgroundColor: isThreatened
+                      ? { repeat: Infinity, duration: 1.5 }
+                      : {},
                   }}
                   className={`border-b-4 border-white relative ${
                     isLayerActive ? "bg-gray-900" : ""
@@ -241,18 +280,23 @@ export default function TacticalHoldings({
                       <span className="text-xs font-black font-mono text-[#D4AF37]">
                         {formatMoney(displayValue, currency)}
                       </span>
-                      <span className={`text-xs font-black font-mono ${
-                        change24h >= 0 ? "text-green-400" : "text-[#FF0000]"
-                      }`}>
-                        {change24h >= 0 ? "+" : ""}{change24h.toFixed(2)}%
+                      <span
+                        className={`text-xs font-black font-mono ${
+                          change24h >= 0 ? "text-green-400" : "text-[#FF0000]"
+                        }`}
+                      >
+                        {change24h >= 0 ? "+" : ""}
+                        {change24h.toFixed(2)}%
                       </span>
                     </div>
 
                     {/* Mini Progress Bar */}
                     <div className="mt-2 h-1 bg-gray-800 w-full">
-                      <div 
+                      <div
                         className={`h-full ${isThreatened ? "bg-[#FF0000]" : "bg-white"}`}
-                        style={{ width: `${Math.min(100, (displayValue / totalValue) * 100)}%` }}
+                        style={{
+                          width: `${Math.min(100, (displayValue / totalValue) * 100)}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -288,7 +332,9 @@ export default function TacticalHoldings({
                               disabled={planningAsset === sym}
                               className="flex-1 px-4 py-3 font-black font-mono text-xs uppercase tracking-widest hover:bg-[#00D4FF] transition-colors disabled:opacity-50"
                             >
-                              {planningAsset === sym ? "ANALYZING..." : "[ PLAN ]"}
+                              {planningAsset === sym
+                                ? "ANALYZING..."
+                                : "[ PLAN ]"}
                             </button>
                           </div>
 
@@ -305,11 +351,15 @@ export default function TacticalHoldings({
                                   NIM AI EVALUATION REPORT
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className={`text-lg font-black font-mono ${
-                                    planResult.verdict === "BULLISH" ? "text-[#00FF88]" :
-                                    planResult.verdict === "BEARISH" ? "text-[#FF3B3B]" :
-                                    "text-[#FFD93D]"
-                                  }`}>
+                                  <span
+                                    className={`text-lg font-black font-mono ${
+                                      planResult.verdict === "BULLISH"
+                                        ? "text-[#00FF88]"
+                                        : planResult.verdict === "BEARISH"
+                                          ? "text-[#FF3B3B]"
+                                          : "text-[#FFD93D]"
+                                    }`}
+                                  >
                                     {planResult.verdict}
                                   </span>
                                   <span className="text-xs font-mono text-gray-400">
@@ -336,6 +386,20 @@ export default function TacticalHoldings({
           TAP HOLDING TO OPEN ACTION TRAY
         </div>
       </div>
+
+      <AmountPromptModal
+        isOpen={sellModal.isOpen}
+        title="SELL POSITION"
+        symbol={sellModal.symbol}
+        unitLabel={sellModal.symbol || "TOKEN"}
+        defaultValue={sellModal.maxAmount}
+        maxValue={sellModal.maxAmount}
+        accent="sell"
+        onClose={() =>
+          setSellModal({ isOpen: false, symbol: "", maxAmount: 0 })
+        }
+        onConfirm={handleSellConfirm}
+      />
     </aside>
   );
 }

@@ -2,7 +2,7 @@
  * Geisha Gains - Market Aggregator API
  * GET /api/market-aggregator
  *
- * Returns BTC/USDT prices from Uphold + mock Binance with the spread.
+ * Returns BTC/USDT prices from primary feed + mock Binance with the spread.
  */
 
 import { NextResponse } from "next/server";

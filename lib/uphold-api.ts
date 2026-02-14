@@ -1,9 +1,11 @@
 /**
- * Geisha Gains - Uphold API Service
+ * Geisha Gains - Market Price Service
  * Coffee Driven Development - BugsByte 2026
- * 
- * Real-time price fetching from Uphold
+ *
+ * Real-time price fetching without Uphold dependency.
  */
+
+import { getQuote } from "@/lib/yahoofinance";
 
 export interface UpholdTicker {
   ask: string;
@@ -20,42 +22,27 @@ export interface MarketPrice {
   timestamp: number;
 }
 
-const UPHOLD_API_BASE = "https://api.uphold.com/v0";
-
 /**
- * Fetch real-time price from Uphold
+ * Backward-compatible export name.
+ * Fetch real-time price from Yahoo-backed quote service.
  */
 export async function fetchUpholdPrice(symbol: string): Promise<MarketPrice> {
   try {
-    const pair = `${symbol}-USD`;
-    const response = await fetch(`${UPHOLD_API_BASE}/ticker/${pair}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Uphold API error: ${response.status}`);
+    const upper = String(symbol || "").toUpperCase();
+    const quote = await getQuote(upper);
+    if (!quote || !Number.isFinite(quote.price) || quote.price <= 0) {
+      throw new Error(`Price unavailable for ${upper}`);
     }
 
-    const data: UpholdTicker = await response.json();
-
-    // Calculate mock 24h change (Uphold ticker doesn't provide this directly)
-    const price = parseFloat(data.ask);
-    const change24h = (Math.random() - 0.5) * 10; // Mock -5% to +5%
-    const volume24h = Math.random() * 1000000;
-
     return {
-      symbol,
-      price,
-      change24h,
-      volume24h,
+      symbol: upper,
+      price: quote.price,
+      change24h: Number(quote.changePercent || 0),
+      volume24h: Number(quote.volume || 0),
       timestamp: Date.now(),
     };
   } catch (error) {
-    console.error(`Failed to fetch ${symbol} from Uphold:`, error);
+    console.error(`Failed to fetch ${symbol} price:`, error);
     return generateMockPrice(symbol);
   }
 }
@@ -114,7 +101,7 @@ export async function* streamPrices(
   while (true) {
     const prices = await fetchAllPrices(symbols);
     yield prices;
-    
+
     // Wait 3 seconds before next update
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
@@ -125,7 +112,7 @@ export async function* streamPrices(
  */
 export async function getHistoricalPrice(
   symbol: string,
-  timestamp: number
+  timestamp: number,
 ): Promise<number> {
   // In a real implementation, this would query historical data
   // For hackathon, return current price with some variation

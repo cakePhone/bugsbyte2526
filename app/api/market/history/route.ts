@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLatestQuotePrices } from "@/lib/marketSnapshots";
 import { getAvailableSymbols } from "@/lib/coinCatalog";
+import { fetchAllPrices } from "@/lib/uphold-api";
 
 const TIMEFRAME_TO_WINDOW_MS: Record<string, number> = {
   "1M": 1 * 60 * 1000,
@@ -60,26 +61,12 @@ async function resolveConversionRate(quote: QuoteCurrency): Promise<number> {
 }
 
 async function fetchAndPersistSymbol(symbol: string) {
-  const tickerRes = await fetch(
-    `https://api.uphold.com/v0/ticker/${symbol}-USD`,
-    { cache: "no-store" },
-  );
-
-  if (!tickerRes.ok) {
-    throw new Error(`Uphold request failed for ${symbol}`);
-  }
-
-  const tickerData = (await tickerRes.json()) as {
-    ask?: string;
-    bid?: string;
-  };
-
-  const ask = Number(tickerData?.ask || 0);
-  const bid = Number(tickerData?.bid || 0);
-  const price = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
+  const market = await fetchAllPrices([symbol]);
+  const current = market.find((entry) => entry.symbol === symbol);
+  const price = Number(current?.price || 0);
 
   if (!Number.isFinite(price) || price <= 0) {
-    throw new Error(`Uphold returned invalid price for ${symbol}`);
+    throw new Error(`Price service returned invalid price for ${symbol}`);
   }
 
   return prisma.marketSnap.create({
@@ -88,7 +75,7 @@ async function fetchAndPersistSymbol(symbol: string) {
       price,
       volume24h: null,
       change24h: null,
-      source: "uphold",
+      source: "price-service",
     },
   });
 }
@@ -188,7 +175,7 @@ export async function GET(req: Request) {
       inserted = await fetchAndPersistSymbol(symbol);
     } catch {
       return NextResponse.json(
-        { error: "Uphold returned an invalid ticker response." },
+        { error: "Price service returned an invalid ticker response." },
         { status: 503 },
       );
     }

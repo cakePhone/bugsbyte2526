@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getLatestQuotePrices } from "@/lib/marketSnapshots";
 import { resolveQuoteCurrency } from "@/lib/walletValuation";
 import { getAvailableSymbols } from "@/lib/coinCatalog";
+import { fetchAllPrices } from "@/lib/uphold-api";
 
 type CoinSymbol = string;
 
@@ -11,15 +12,10 @@ async function isTickerTradable(symbol: string): Promise<boolean> {
   if (!/^[A-Z0-9]{2,12}$/.test(symbol)) return false;
 
   try {
-    const res = await fetch(`https://api.uphold.com/v0/ticker/${symbol}-USD`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return false;
-
-    const data = (await res.json()) as { ask?: string; bid?: string };
-    const ask = Number(data.ask || 0);
-    const bid = Number(data.bid || 0);
-    const price = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
+    const market = await fetchAllPrices([symbol]);
+    const price = Number(
+      market.find((entry) => entry.symbol === symbol)?.price || 0,
+    );
     return Number.isFinite(price) && price > 0;
   } catch {
     return false;

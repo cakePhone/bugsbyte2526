@@ -2,9 +2,11 @@
  * Geisha Gains - AI Arbitrage Analyzer
  * "Spread Hunters" Engine - BugsByte 2026
  *
- * Polls Uphold + 2 mock exchanges, feeds spreads into NVIDIA NIM (Llama-3),
+ * Polls primary price feed + 2 mock exchanges, feeds spreads into NVIDIA NIM (Llama-3),
  * and identifies the "Green Bean" — the exchange with the best price.
  */
+
+import { fetchAllPrices } from "@/lib/uphold-api";
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface ExchangeQuote {
@@ -12,26 +14,26 @@ export interface ExchangeQuote {
   symbol: string;
   ask: number;
   bid: number;
-  spread: number;        // ask – bid
-  spreadPct: number;     // spread / ask × 100
+  spread: number; // ask – bid
+  spreadPct: number; // spread / ask × 100
   timestamp: number;
 }
 
 export interface ArbitrageOpportunity {
   symbol: string;
-  greenBean: ExchangeQuote;          // best (lowest) ask
-  worstAsk: ExchangeQuote;           // highest ask
-  potentialProfitPct: number;        // (worstAsk - greenBean) / greenBean × 100
+  greenBean: ExchangeQuote; // best (lowest) ask
+  worstAsk: ExchangeQuote; // highest ask
+  potentialProfitPct: number; // (worstAsk - greenBean) / greenBean × 100
   allQuotes: ExchangeQuote[];
   aiVerdict: AIVerdict;
 }
 
 export interface AIVerdict {
-  action: 'BUY' | 'SELL' | 'HOLD';
+  action: "BUY" | "SELL" | "HOLD";
   confidence: number;
   reasoning: string;
   bestExchange: string;
-  riskLevel: 'LOW_CAFFEINE' | 'MEDIUM_CAFFEINE' | 'HIGH_CAFFEINE';
+  riskLevel: "LOW_CAFFEINE" | "MEDIUM_CAFFEINE" | "HIGH_CAFFEINE";
   supportLevel: number;
   resistanceLevel: number;
 }
@@ -44,21 +46,23 @@ export interface AnalyzerSnapshot {
 
 // ─── Exchange Price Fetchers ─────────────────────────────────────────
 
-const UPHOLD_API = "https://api.uphold.com/v0";
 const FALLBACK_SYMBOLS = ["BTC", "ETH", "XRP", "SOL", "ADA"];
 
-/** Fetch from Uphold (real API, public endpoint) */
+/** Fetch from primary shared feed */
 async function fetchUphold(symbol: string): Promise<ExchangeQuote> {
   try {
-    const res = await fetch(`${UPHOLD_API}/ticker/${symbol}-USD`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`Uphold ${res.status}`);
-    const data = await res.json();
-    const ask = parseFloat(data.ask);
-    const bid = parseFloat(data.bid);
+    const market = await fetchAllPrices([symbol]);
+    const current = market.find((entry) => entry.symbol === symbol);
+    const mid = Number(current?.price || 0);
+    if (!Number.isFinite(mid) || mid <= 0)
+      throw new Error("Feed price unavailable");
+
+    const spread = Math.max(mid * 0.0003, 0.5);
+    const ask = mid + spread;
+    const bid = Math.max(0, mid - spread);
+
     return {
-      exchange: 'UPHOLD',
+      exchange: "PRIMARY",
       symbol,
       ask,
       bid,
@@ -67,7 +71,7 @@ async function fetchUphold(symbol: string): Promise<ExchangeQuote> {
       timestamp: Date.now(),
     };
   } catch {
-    return mockQuote('UPHOLD', symbol);
+    return mockQuote("PRIMARY", symbol);
   }
 }
 
@@ -77,12 +81,12 @@ function fetchBrewSwap(symbol: string, upholdAsk: number): ExchangeQuote {
   const ask = upholdAsk * (1 + drift);
   const bid = ask * (1 - 0.001 - Math.random() * 0.003);
   return {
-    exchange: 'BREWSWAP',
+    exchange: "BREWSWAP",
     symbol,
     ask: +ask.toFixed(2),
     bid: +bid.toFixed(2),
     spread: +(ask - bid).toFixed(2),
-    spreadPct: +((ask - bid) / ask * 100).toFixed(4),
+    spreadPct: +(((ask - bid) / ask) * 100).toFixed(4),
     timestamp: Date.now(),
   };
 }
@@ -93,12 +97,12 @@ function fetchRoastFi(symbol: string, upholdAsk: number): ExchangeQuote {
   const ask = upholdAsk * (1 + drift);
   const bid = ask * (1 - 0.0015 - Math.random() * 0.002);
   return {
-    exchange: 'ROASTFI',
+    exchange: "ROASTFI",
     symbol,
     ask: +ask.toFixed(2),
     bid: +bid.toFixed(2),
     spread: +(ask - bid).toFixed(2),
-    spreadPct: +((ask - bid) / ask * 100).toFixed(4),
+    spreadPct: +(((ask - bid) / ask) * 100).toFixed(4),
     timestamp: Date.now(),
   };
 }
@@ -114,7 +118,7 @@ function mockQuote(exchange: string, symbol: string): ExchangeQuote {
     ask,
     bid,
     spread: +(ask - bid).toFixed(2),
-    spreadPct: +((ask - bid) / ask * 100).toFixed(4),
+    spreadPct: +(((ask - bid) / ask) * 100).toFixed(4),
     timestamp: Date.now(),
   };
 }
@@ -123,10 +127,10 @@ function mockQuote(exchange: string, symbol: string): ExchangeQuote {
 
 async function getAIVerdict(
   symbol: string,
-  quotes: ExchangeQuote[]
+  quotes: ExchangeQuote[],
 ): Promise<AIVerdict> {
-  const NIM_ENDPOINT = process.env.NVIDIA_NIM_ENDPOINT || '';
-  const NIM_KEY = process.env.NVIDIA_API_KEY || '';
+  const NIM_ENDPOINT = process.env.NVIDIA_NIM_ENDPOINT || "";
+  const NIM_KEY = process.env.NVIDIA_API_KEY || "";
 
   const sortedByAsk = [...quotes].sort((a, b) => a.ask - b.ask);
   const best = sortedByAsk[0];
@@ -141,22 +145,26 @@ async function getAIVerdict(
   if (NIM_ENDPOINT && NIM_KEY) {
     try {
       const prompt = `Analyze this crypto arbitrage for ${symbol}:
-${quotes.map((q) => `${q.exchange}: ask=$${q.ask} bid=$${q.bid} spread=${q.spreadPct.toFixed(4)}%`).join('\n')}
+${quotes.map((q) => `${q.exchange}: ask=$${q.ask} bid=$${q.bid} spread=${q.spreadPct.toFixed(4)}%`).join("\n")}
 Best exchange: ${best.exchange} at $${best.ask}
 Spread opportunity: ${spreadPct.toFixed(4)}%
 Return JSON only: {"action":"BUY|SELL|HOLD","confidence":0-100,"reasoning":"...","bestExchange":"...","riskLevel":"LOW_CAFFEINE|MEDIUM_CAFFEINE|HIGH_CAFFEINE"}`;
 
       const res = await fetch(NIM_ENDPOINT, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${NIM_KEY}`,
         },
         body: JSON.stringify({
-          model: 'meta/llama-3-70b-instruct',
+          model: "meta/llama-3-70b-instruct",
           messages: [
-            { role: 'system', content: 'You are a crypto arbitrage analyst. Return ONLY valid JSON.' },
-            { role: 'user', content: prompt },
+            {
+              role: "system",
+              content:
+                "You are a crypto arbitrage analyst. Return ONLY valid JSON.",
+            },
+            { role: "user", content: prompt },
           ],
           temperature: 0.6,
           max_tokens: 300,
@@ -166,8 +174,11 @@ Return JSON only: {"action":"BUY|SELL|HOLD","confidence":0-100,"reasoning":"..."
 
       if (res.ok) {
         const data = await res.json();
-        const raw = data.choices?.[0]?.message?.content || '';
-        const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const raw = data.choices?.[0]?.message?.content || "";
+        const cleaned = raw
+          .replace(/```json\n?/g, "")
+          .replace(/```\n?/g, "")
+          .trim();
         const parsed = JSON.parse(cleaned);
         return {
           ...parsed,
@@ -177,31 +188,31 @@ Return JSON only: {"action":"BUY|SELL|HOLD","confidence":0-100,"reasoning":"..."
         };
       }
     } catch (e) {
-      console.error('NIM verdict failed, using mock:', e);
+      console.error("NIM verdict failed, using mock:", e);
     }
   }
 
   // ── Mock verdict ──
-  let action: 'BUY' | 'SELL' | 'HOLD';
+  let action: "BUY" | "SELL" | "HOLD";
   let confidence: number;
   let reasoning: string;
-  let riskLevel: 'LOW_CAFFEINE' | 'MEDIUM_CAFFEINE' | 'HIGH_CAFFEINE';
+  let riskLevel: "LOW_CAFFEINE" | "MEDIUM_CAFFEINE" | "HIGH_CAFFEINE";
 
   if (spreadPct > 0.3) {
-    action = 'BUY';
+    action = "BUY";
     confidence = 75 + Math.floor(Math.random() * 20);
     reasoning = `${spreadPct.toFixed(3)}% cross-exchange spread detected on ${best.exchange}. Execute buy on Green Bean, sell on ${worst.exchange}.`;
-    riskLevel = 'HIGH_CAFFEINE';
+    riskLevel = "HIGH_CAFFEINE";
   } else if (spreadPct > 0.1) {
-    action = 'BUY';
+    action = "BUY";
     confidence = 55 + Math.floor(Math.random() * 20);
     reasoning = `Moderate ${spreadPct.toFixed(3)}% spread. ${best.exchange} offers best entry.`;
-    riskLevel = 'MEDIUM_CAFFEINE';
+    riskLevel = "MEDIUM_CAFFEINE";
   } else {
-    action = 'HOLD';
+    action = "HOLD";
     confidence = 40 + Math.floor(Math.random() * 15);
     reasoning = `Tight ${spreadPct.toFixed(3)}% spread. No clear arbitrage edge.`;
-    riskLevel = 'LOW_CAFFEINE';
+    riskLevel = "LOW_CAFFEINE";
   }
 
   return {
@@ -217,15 +228,17 @@ Return JSON only: {"action":"BUY|SELL|HOLD","confidence":0-100,"reasoning":"..."
 
 // ─── Sentiment Calculation ───────────────────────────────────────────
 
-function calculateSentiment(
-  opps: ArbitrageOpportunity[]
-): { bulls: number; bears: number } {
+function calculateSentiment(opps: ArbitrageOpportunity[]): {
+  bulls: number;
+  bears: number;
+} {
   let buySignals = 0;
   let sellSignals = 0;
 
   opps.forEach((o) => {
-    if (o.aiVerdict.action === 'BUY') buySignals += o.aiVerdict.confidence;
-    else if (o.aiVerdict.action === 'SELL') sellSignals += o.aiVerdict.confidence;
+    if (o.aiVerdict.action === "BUY") buySignals += o.aiVerdict.confidence;
+    else if (o.aiVerdict.action === "SELL")
+      sellSignals += o.aiVerdict.confidence;
     else {
       buySignals += o.aiVerdict.confidence * 0.3;
       sellSignals += o.aiVerdict.confidence * 0.3;

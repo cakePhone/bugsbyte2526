@@ -1,6 +1,6 @@
 /**
  * THE WAR ROOM — Main Trading Dashboard
- * 
+ *
  * Geisha Gains • BugsByte 2026
  * High-density, high-utility trading interface.
  * Minimalist Brutalist Design System.
@@ -13,7 +13,9 @@ import { useRouter } from "next/navigation";
 import WarRoomLayout from "@/components/dashboard/WarRoomLayout";
 import TacticalHoldings from "@/components/dashboard/TacticalHoldings";
 import SuperpositionedGraph from "@/components/dashboard/SuperpositionedGraph";
-import IntelligenceExchangeBar, { generateMockExchangeQuotes } from "@/components/dashboard/IntelligenceExchangeBar";
+import IntelligenceExchangeBar, {
+  generateMockExchangeQuotes,
+} from "@/components/dashboard/IntelligenceExchangeBar";
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
@@ -45,11 +47,7 @@ function WarRoomContent() {
     prices,
   } = useDashboardData(router);
 
-  const {
-    analyses,
-    isLoading,
-    scanCount,
-  } = useNewsAnalysis({
+  const { analyses, isLoading, scanCount } = useNewsAnalysis({
     profile,
     holdings,
   });
@@ -59,7 +57,7 @@ function WarRoomContent() {
 
   const handleSellRequest = async (symbol: string, amount: number) => {
     if (isExecutingTrade) return;
-    
+
     try {
       setIsExecutingTrade(true);
       const res = await fetch("/api/user/wallets/sell", {
@@ -80,19 +78,62 @@ function WarRoomContent() {
       window.location.reload();
     } catch (error) {
       console.error("[SELL] Error:", error);
-      alert(error instanceof Error ? error.message : "Failed to execute sell order");
+      alert(
+        error instanceof Error ? error.message : "Failed to execute sell order",
+      );
+    } finally {
+      setIsExecutingTrade(false);
+    }
+  };
+
+  const handleBuyRequest = async (
+    exchange: string,
+    symbol: string,
+    amountUsdt: number,
+  ) => {
+    if (isExecutingTrade) return;
+
+    try {
+      setIsExecutingTrade(true);
+      const res = await fetch("/api/user/wallets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          amountUsdt,
+          exchange,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Buy failed");
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error("[BUY] Error:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to execute buy order",
+      );
     } finally {
       setIsExecutingTrade(false);
     }
   };
 
   // Get symbols from WarRoom state layers
-  const selectedSymbols = state.layers.map((l) => l.symbol);
+  const selectedSymbols = useMemo(
+    () => state.layers.map((layer) => layer.symbol),
+    [state.layers],
+  );
 
   // Initialize layers from first holding on first load (no BTC hardcoding)
-  const holdingSymbols = useMemo(() => 
-    Object.entries(holdings).filter(([, amt]) => amt > 0).map(([sym]) => sym),
-    [holdings]
+  const holdingSymbols = useMemo(
+    () =>
+      Object.entries(holdings)
+        .filter(([, amt]) => amt > 0)
+        .map(([sym]) => sym),
+    [holdings],
   );
 
   useEffect(() => {
@@ -104,11 +145,7 @@ function WarRoomContent() {
   // Map TimeWindow to ChartTimeframe
   const chartTimeframe = TIME_WINDOW_MAP[state.timeWindow];
 
-  const {
-    priceHistories,
-    chartLoading,
-    setActiveTimeframe,
-  } = useChartHistory({
+  const { priceHistories, chartLoading, setActiveTimeframe } = useChartHistory({
     authChecked,
     selectedChartSymbols: selectedSymbols,
     displayCurrency,
@@ -131,10 +168,8 @@ function WarRoomContent() {
     setApiErrors(errors);
   }, [chartLoading, priceHistories, selectedSymbols]);
 
-  const {
-    loading: arbitrageLoading,
-    scanCount: arbitrageScanCount,
-  } = useArbitrageMonitor(authChecked);
+  const { loading: arbitrageLoading, scanCount: arbitrageScanCount } =
+    useArbitrageMonitor(authChecked);
 
   // Compute threatened symbols from news analysis
   const threatenedSymbols = useMemo(() => {
@@ -150,16 +185,25 @@ function WarRoomContent() {
   }, [analyses, holdings]);
 
   // Generate exchange quotes for the primary/solo asset (dynamic, no BTC fallback)
-  const primarySymbol = state.layers.find((l) => l.isPrimary)?.symbol || state.layers[0]?.symbol || "";
+  const primarySymbol =
+    state.layers.find((l) => l.isPrimary)?.symbol ||
+    state.layers[0]?.symbol ||
+    "";
   const primaryPrice = prices[primarySymbol] || 0;
-  const exchangeQuotes = useMemo(() => 
-    primarySymbol ? generateMockExchangeQuotes(primarySymbol, primaryPrice || 100) : [],
-    [primarySymbol, primaryPrice]
+  const exchangeQuotes = useMemo(
+    () =>
+      primarySymbol
+        ? generateMockExchangeQuotes(primarySymbol, primaryPrice || 100)
+        : [],
+    [primarySymbol, primaryPrice],
   );
 
   // Mock AI predictions
   const aiPredictions = useMemo(() => {
-    const predictions: Record<string, { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }> = {};
+    const predictions: Record<
+      string,
+      { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }
+    > = {};
     availableCoins.forEach((coin) => {
       const rand = Math.random();
       predictions[coin] = {
@@ -237,6 +281,7 @@ function WarRoomContent() {
             quotes={exchangeQuotes}
             isLoading={chartLoading || arbitrageLoading}
             apiFailed={Object.values(apiErrors).some(Boolean)}
+            onExecuteTrade={handleBuyRequest}
           />
         </div>
       </div>
@@ -247,17 +292,10 @@ function WarRoomContent() {
 // Wrapper component to pass props to layout
 function WarRoomWrapper() {
   const router = useRouter();
-  
-  const {
-    profile,
-    holdings,
-    availableCoins,
-  } = useDashboardData(router);
 
-  const {
-    isLoading,
-    scanCount,
-  } = useNewsAnalysis({
+  const { profile, holdings, availableCoins } = useDashboardData(router);
+
+  const { isLoading, scanCount } = useNewsAnalysis({
     profile,
     holdings,
   });

@@ -1,65 +1,45 @@
-const UPHOLD_API_BASE = "https://api.uphold.com/v0";
-
 export interface CoinCatalogEntry {
   symbol: string;
-  source: "uphold";
+  source: "catalog";
 }
 
 const DEFAULT_SYMBOL_LIMIT = 25;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const FIAT_SYMBOLS = new Set([
-  "USD",
-  "EUR",
-  "GBP",
-  "JPY",
-  "CHF",
-  "AUD",
-  "CAD",
-  "NZD",
-  "SEK",
-  "NOK",
-  "DKK",
-]);
-
-type UpholdTicker = {
-  pair?: string;
-  ask?: string;
-  bid?: string;
-};
+const SUPPORTED_SYMBOLS = [
+  "BTC",
+  "ETH",
+  "XRP",
+  "SOL",
+  "ADA",
+  "DOGE",
+  "LTC",
+  "AVAX",
+  "DOT",
+  "MATIC",
+  "LINK",
+  "UNI",
+  "ATOM",
+  "FIL",
+  "NEAR",
+  "APE",
+  "SAND",
+  "MANA",
+  "AAVE",
+  "CRV",
+  "COMP",
+  "MKR",
+  "SHIB",
+  "ALGO",
+  "FTM",
+  "HBAR",
+  "BNB",
+  "XLM",
+  "TRX",
+  "USDT",
+] as const;
 
 let cached: { coins: CoinCatalogEntry[]; expiresAt: number } | null = null;
-
-async function fetchUpholdTickers(): Promise<UpholdTicker[]> {
-  const res = await fetch(`${UPHOLD_API_BASE}/ticker`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Uphold ticker fetch failed (${res.status})`);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
-}
-
-function extractSymbols(
-  tickers: UpholdTicker[],
-  quote: string,
-): CoinCatalogEntry[] {
-  const symbols = new Set<string>();
-
-  tickers.forEach((ticker) => {
-    const pair = String(ticker.pair || "").toUpperCase();
-    if (!pair.endsWith(`-${quote}`)) return;
-    const base = pair.split("-")[0];
-    if (!base || FIAT_SYMBOLS.has(base)) return;
-    if (base.length < 2 || base.length > 12) return;
-    symbols.add(base);
-  });
-
-  if (!symbols.has("USDT")) symbols.add("USDT");
-
-  return Array.from(symbols)
-    .sort((a, b) => a.localeCompare(b))
-    .map((symbol) => ({ symbol, source: "uphold" as const }));
-}
 
 export async function getAvailableCoins(options?: {
   limit?: number;
@@ -72,25 +52,16 @@ export async function getAvailableCoins(options?: {
     return cached.coins.slice(0, limit);
   }
 
-  const fallbackSymbols = ["BTC", "ETH", "XRP", "USDT", "SOL", "ADA", "DOGE"];
-
-  let coins: CoinCatalogEntry[] = [];
-  try {
-    const tickers = await fetchUpholdTickers();
-    coins = extractSymbols(tickers, quote);
-  } catch {
-    coins = [];
-  }
-
-  const safeCoins =
-    coins.length > 0
-      ? coins
-      : fallbackSymbols.map((symbol) => ({ symbol, source: "uphold" as const }));
+  const safeCoins = Array.from(new Set(SUPPORTED_SYMBOLS))
+    .sort((a, b) => a.localeCompare(b))
+    .map((symbol) => ({ symbol, source: "catalog" as const }));
 
   cached = {
     coins: safeCoins,
     expiresAt: Date.now() + CACHE_TTL_MS,
   };
+
+  void quote;
 
   return safeCoins.slice(0, limit);
 }

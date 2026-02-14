@@ -4,7 +4,7 @@
  *
  * Simulates a Binance-like BTC/USDT order book response.
  * In production this would hit the real Binance REST API;
- * for the hackathon we derive a realistic price from Uphold's
+ * for the hackathon we derive a realistic price from the primary feed's
  * feed plus a small random spread.
  */
 
@@ -13,7 +13,7 @@ import type { ExchangePrice } from "./uphold";
 /**
  * Generate a mock Binance BTC/USDT price.
  *
- * Accepts an optional `referencePrice` (e.g. from Uphold) so the
+ * Accepts an optional `referencePrice` (e.g. from primary feed) so the
  * mock stays realistic.  If none is provided, falls back to a
  * hard-coded base price.
  */

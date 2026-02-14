@@ -14,6 +14,21 @@ type WalletCoin = string;
 
 const EPSILON = 1e-10;
 
+const SYMBOL_ALIASES: Record<string, string> = {
+  XBT: "BTC",
+};
+
+function normalizeWalletSymbol(input: unknown): WalletCoin {
+  const raw = String(input || "")
+    .trim()
+    .toUpperCase();
+  if (!raw) return "";
+
+  const base = raw.replace("/", "-").split("-")[0].trim();
+
+  return SYMBOL_ALIASES[base] || base;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -22,8 +37,15 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const symbol = String(body?.symbol || "").toUpperCase() as WalletCoin;
+    const symbol = normalizeWalletSymbol(body?.symbol);
     const amountUsdt = Number(body?.amountUsdt);
+
+    if (!symbol) {
+      return NextResponse.json(
+        { error: "symbol is required." },
+        { status: 400 },
+      );
+    }
 
     const supportedCoins = await getAvailableSymbols({ limit: 200 });
 
