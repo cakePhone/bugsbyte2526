@@ -7,23 +7,33 @@
  * Filtered through user's RiskProfile from The Interrogation
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import TheBulletin from '@/components/dashboard/TheBulletin';
-import ThreatRadar from '@/components/dashboard/ThreatRadar';
-import ActionOverlay, { FatalEventLine } from '@/components/dashboard/ActionOverlay';
-import type { NewsAnalysis } from '@/app/api/news/analyze/route';
-import type { RiskProfile } from '@/components/onboarding/TheInterrogation';
-import { calculateNetProfit } from '@/lib/market-aggregator/netProfit';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import TheBulletin from "@/components/dashboard/TheBulletin";
+import ThreatRadar from "@/components/dashboard/ThreatRadar";
+import ActionOverlay, {
+  FatalEventLine,
+} from "@/components/dashboard/ActionOverlay";
+import type { NewsAnalysis } from "@/app/api/news/analyze/route";
+import type { RiskProfile } from "@/components/onboarding/TheInterrogation";
+import { calculateNetProfit } from "@/lib/market-aggregator/netProfit";
 
 // ── Types ─────────────────────────────────────────────────
-interface PricePoint { timestamp: number; price: number }
+interface PricePoint {
+  timestamp: number;
+  price: number;
+}
 
 // ── Mock prices (simulated from Uphold-style data) ───────
 function generateMockPrice(symbol: string): number {
-  const bases: Record<string, number> = { BTC: 97000, ETH: 3600, XRP: 2.5, USDT: 1 };
+  const bases: Record<string, number> = {
+    BTC: 97000,
+    ETH: 3600,
+    XRP: 2.5,
+    USDT: 1,
+  };
   const base = bases[symbol] || 100;
   return base * (1 + (Math.random() - 0.5) * 0.01);
 }
@@ -33,22 +43,39 @@ export default function WarRoom() {
   // Profile from localStorage (set by The Interrogation)
   const [profile, setProfile] = useState<RiskProfile | null>(null);
   const [analyses, setAnalyses] = useState<NewsAnalysis[]>([]);
-  const [selectedArticle, setSelectedArticle] = useState<NewsAnalysis | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<NewsAnalysis | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [scanCount, setScanCount] = useState(0);
 
   // Wallet state
   const [walletBalance, setWalletBalance] = useState(10000);
-  const [holdings, setHoldings] = useState<Record<string, number>>({ BTC: 0.1, ETH: 2.0 });
-  const [trades, setTrades] = useState<Array<{
-    symbol: string; side: 'BUY' | 'SELL'; amount: number; price: number; ts: number;
-  }>>([]);
+  const [holdings, setHoldings] = useState<Record<string, number>>({
+    BTC: 0.1,
+    ETH: 2.0,
+  });
+  const [trades, setTrades] = useState<
+    Array<{
+      symbol: string;
+      side: "BUY" | "SELL";
+      amount: number;
+      price: number;
+      ts: number;
+    }>
+  >([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
-  const [priceHistories, setPriceHistories] = useState<Record<string, PricePoint[]>>({});
+  const [priceHistories, setPriceHistories] = useState<
+    Record<string, PricePoint[]>
+  >({});
 
   // Fatal events
-  const [fatalEvents, setFatalEvents] = useState<Array<{ timestamp: number; headline: string }>>([]);
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const [fatalEvents, setFatalEvents] = useState<
+    Array<{ timestamp: number; headline: string }>
+  >([]);
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(
+    new Set(),
+  );
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const priceRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -56,23 +83,23 @@ export default function WarRoom() {
   // ── Load profile from localStorage ──────────────────────
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('geisha_risk_profile');
+      const stored = localStorage.getItem("geisha_risk_profile");
       if (stored) setProfile(JSON.parse(stored));
       else {
         // Default profile if none exists
         setProfile({
-          risk_tolerance: 'MODERATE',
-          investment_horizon: 'SWING',
-          focus_sectors: ['CRYPTO'],
-          geopolitical_sensitivity: 'AWARE',
+          risk_tolerance: "MODERATE",
+          investment_horizon: "SWING",
+          focus_sectors: ["CRYPTO"],
+          geopolitical_sensitivity: "AWARE",
         });
       }
     } catch {
       setProfile({
-        risk_tolerance: 'MODERATE',
-        investment_horizon: 'SWING',
-        focus_sectors: ['CRYPTO'],
-        geopolitical_sensitivity: 'AWARE',
+        risk_tolerance: "MODERATE",
+        investment_horizon: "SWING",
+        focus_sectors: ["CRYPTO"],
+        geopolitical_sensitivity: "AWARE",
       });
     }
   }, []);
@@ -81,7 +108,7 @@ export default function WarRoom() {
   useEffect(() => {
     const updatePrices = () => {
       const newPrices: Record<string, number> = {};
-      ['BTC', 'ETH', 'XRP'].forEach((sym) => {
+      ["BTC", "ETH", "XRP"].forEach((sym) => {
         newPrices[sym] = generateMockPrice(sym);
       });
       setPrices(newPrices);
@@ -90,7 +117,10 @@ export default function WarRoom() {
       setPriceHistories((prev) => {
         const updated = { ...prev };
         Object.entries(newPrices).forEach(([sym, price]) => {
-          updated[sym] = [...(updated[sym] || []).slice(-60), { timestamp: Date.now(), price }];
+          updated[sym] = [
+            ...(updated[sym] || []).slice(-60),
+            { timestamp: Date.now(), price },
+          ];
         });
         return updated;
       });
@@ -98,7 +128,9 @@ export default function WarRoom() {
 
     updatePrices();
     priceRef.current = setInterval(updatePrices, 3000);
-    return () => { if (priceRef.current) clearInterval(priceRef.current); };
+    return () => {
+      if (priceRef.current) clearInterval(priceRef.current);
+    };
   }, []);
 
   // ── Poll news analysis API ─────────────────────────────
@@ -108,18 +140,18 @@ export default function WarRoom() {
       setIsLoading(true);
       const holdingsParam = Object.entries(holdings)
         .map(([s, a]) => `${s}:${a}`)
-        .join(',');
+        .join(",");
 
       const params = new URLSearchParams({
         risk_tolerance: profile.risk_tolerance,
         investment_horizon: profile.investment_horizon,
-        focus_sectors: profile.focus_sectors.join(','),
+        focus_sectors: profile.focus_sectors.join(","),
         geopolitical_sensitivity: profile.geopolitical_sensitivity,
         holdings: holdingsParam,
       });
 
       const res = await fetch(`/api/news/analyze?${params}`);
-      if (!res.ok) throw new Error('Analysis failed');
+      if (!res.ok) throw new Error("Analysis failed");
 
       const data = await res.json();
       setAnalyses(data.analyses || []);
@@ -127,7 +159,9 @@ export default function WarRoom() {
 
       // Track fatal events for the chart
       const fatalItems = (data.analyses || []).filter(
-        (a: NewsAnalysis) => a.portfolio_threat > 8 && (a.sentiment === 'BEARISH' || a.sentiment === 'LETHAL')
+        (a: NewsAnalysis) =>
+          a.portfolio_threat > 8 &&
+          (a.sentiment === "BEARISH" || a.sentiment === "LETHAL"),
       );
       if (fatalItems.length > 0) {
         setFatalEvents((prev) => [
@@ -139,7 +173,7 @@ export default function WarRoom() {
         ]);
       }
     } catch (e) {
-      console.error('News analysis error:', e);
+      console.error("News analysis error:", e);
     } finally {
       setIsLoading(false);
     }
@@ -149,28 +183,33 @@ export default function WarRoom() {
     if (!profile) return;
     fetchAnalysis();
     tickRef.current = setInterval(fetchAnalysis, 30000); // Every 30s
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
   }, [fetchAnalysis, profile]);
 
   // ── Quick Sell Handler ──────────────────────────────────
-  const handleQuickSell = useCallback((symbol: string) => {
-    const amount = holdings[symbol] || 0;
-    if (amount === 0) return;
+  const handleQuickSell = useCallback(
+    (symbol: string) => {
+      const amount = holdings[symbol] || 0;
+      if (amount === 0) return;
 
-    const price = prices[symbol] || 0;
-    const total = price * amount;
+      const price = prices[symbol] || 0;
+      const total = price * amount;
 
-    setWalletBalance((b) => b + total);
-    setHoldings((h) => {
-      const updated = { ...h };
-      delete updated[symbol];
-      return updated;
-    });
-    setTrades((t) => [
-      { symbol, side: 'SELL', amount, price, ts: Date.now() },
-      ...t.slice(0, 49),
-    ]);
-  }, [holdings, prices]);
+      setWalletBalance((b) => b + total);
+      setHoldings((h) => {
+        const updated = { ...h };
+        delete updated[symbol];
+        return updated;
+      });
+      setTrades((t) => [
+        { symbol, side: "SELL", amount, price, ts: Date.now() },
+        ...t.slice(0, 49),
+      ]);
+    },
+    [holdings, prices],
+  );
 
   // ── Dismiss Alert ───────────────────────────────────────
   const handleDismissAlert = useCallback((id: string) => {
@@ -183,20 +222,23 @@ export default function WarRoom() {
 
   // ── Derived Data ────────────────────────────────────────
   const totalHoldingsValue = Object.entries(holdings).reduce(
-    (acc, [sym, amt]) => acc + amt * (prices[sym] || 0), 0
+    (acc, [sym, amt]) => acc + amt * (prices[sym] || 0),
+    0,
   );
   const totalValue = walletBalance + totalHoldingsValue;
 
   const highThreatCount = analyses.filter((a) => a.threat_level >= 8).length;
-  const lethalCount = analyses.filter((a) => a.sentiment === 'LETHAL').length;
+  const lethalCount = analyses.filter((a) => a.sentiment === "LETHAL").length;
 
   // Active chart symbol (the one most under threat, or BTC default)
-  const [activeChartSymbol, setActiveChartSymbol] = useState('BTC');
+  const [activeChartSymbol, setActiveChartSymbol] = useState("BTC");
 
   if (!profile) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-        <div className="text-gray-500 font-mono text-sm">LOADING PROFILE...</div>
+        <div className="text-gray-500 font-mono text-sm">
+          LOADING PROFILE...
+        </div>
       </div>
     );
   }
@@ -223,33 +265,42 @@ export default function WarRoom() {
                 animate={{ opacity: [1, 0.7, 1] }}
                 transition={{ repeat: Infinity, duration: 0.8 }}
               >
-                {highThreatCount} HIGH THREAT{highThreatCount > 1 ? 'S' : ''}
+                {highThreatCount} HIGH THREAT{highThreatCount > 1 ? "S" : ""}
               </motion.div>
             )}
 
             {/* Scan Status */}
             <div className="border-2 border-white px-3 py-1 flex items-center gap-2">
               <motion.div
-                className={`w-2 h-2 ${isLoading ? 'bg-[#FF0000]' : 'bg-green-400'}`}
+                className={`w-2 h-2 ${isLoading ? "bg-[#FF0000]" : "bg-green-400"}`}
                 animate={isLoading ? { scale: [1, 1.4, 1] } : {}}
                 transition={{ repeat: Infinity, duration: 0.3 }}
               />
-              <span className="text-[10px] font-bold text-gray-300">{scanCount} SCANS</span>
+              <span className="text-[10px] font-bold text-gray-300">
+                {scanCount} SCANS
+              </span>
             </div>
 
             {/* Profile Badge */}
             <div className="hidden md:flex items-center gap-1">
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                profile.risk_tolerance === 'AGGRESSIVE' ? 'border-[#FF0000] text-[#FF0000]' :
-                profile.risk_tolerance === 'MODERATE' ? 'border-[#D4AF37] text-[#D4AF37]' :
-                'border-gray-500 text-gray-400'
-              }`}>
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
+                  profile.risk_tolerance === "AGGRESSIVE"
+                    ? "border-[#FF0000] text-[#FF0000]"
+                    : profile.risk_tolerance === "MODERATE"
+                      ? "border-[#D4AF37] text-[#D4AF37]"
+                      : "border-gray-500 text-gray-400"
+                }`}
+              >
                 {profile.risk_tolerance}
               </span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                profile.geopolitical_sensitivity === 'PARANOID' ? 'border-[#FF0000] text-[#FF0000]' :
-                'border-gray-600 text-gray-500'
-              }`}>
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
+                  profile.geopolitical_sensitivity === "PARANOID"
+                    ? "border-[#FF0000] text-[#FF0000]"
+                    : "border-gray-600 text-gray-500"
+                }`}
+              >
                 {profile.geopolitical_sensitivity}
               </span>
             </div>
@@ -261,10 +312,24 @@ export default function WarRoom() {
       <main className="max-w-[1600px] mx-auto p-4 space-y-4">
         {/* ── Row 1: Portfolio Summary Bar ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="PORTFOLIO VALUE" value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-          <StatCard label="CASH (USDT)" value={`$${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-          <StatCard label="THREAT LEVEL" value={highThreatCount > 0 ? `${highThreatCount} HIGH` : 'CLEAR'} alert={highThreatCount > 0} />
-          <StatCard label="LETHAL EVENTS" value={lethalCount > 0 ? `${lethalCount} ACTIVE` : 'NONE'} alert={lethalCount > 0} />
+          <StatCard
+            label="PORTFOLIO VALUE"
+            value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          />
+          <StatCard
+            label="CASH (USDT)"
+            value={`$${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          />
+          <StatCard
+            label="THREAT LEVEL"
+            value={highThreatCount > 0 ? `${highThreatCount} HIGH` : "CLEAR"}
+            alert={highThreatCount > 0}
+          />
+          <StatCard
+            label="LETHAL EVENTS"
+            value={lethalCount > 0 ? `${lethalCount} ACTIVE` : "NONE"}
+            alert={lethalCount > 0}
+          />
         </div>
 
         {/* ── Row 2: Price Chart + Threat Radar ── */}
@@ -274,17 +339,23 @@ export default function WarRoom() {
             <div className="border-4 border-white bg-black">
               {/* Chart Header — Symbol Tabs */}
               <div className="border-b-4 border-white flex">
-                {['BTC', 'ETH', 'XRP'].map((sym) => (
+                {["BTC", "ETH", "XRP"].map((sym) => (
                   <button
                     key={sym}
                     onClick={() => setActiveChartSymbol(sym)}
                     className={`flex-1 border-r-2 border-gray-800 last:border-r-0 px-4 py-3 transition-colors ${
-                      activeChartSymbol === sym ? 'bg-white text-black' : 'bg-black text-white hover:bg-gray-900'
+                      activeChartSymbol === sym
+                        ? "bg-white text-black"
+                        : "bg-black text-white hover:bg-gray-900"
                     }`}
                   >
                     <div className="text-sm font-bold">{sym}</div>
                     <div className="text-lg font-bold">
-                      ${(prices[sym] || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      $
+                      {(prices[sym] || 0).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </div>
                     {holdings[sym] && (
                       <div className="text-[10px] text-gray-500">
@@ -301,7 +372,11 @@ export default function WarRoom() {
                   history={priceHistories[activeChartSymbol] || []}
                   symbol={activeChartSymbol}
                 />
-                <FatalEventLine events={fatalEvents} />
+                <FatalEventLine
+                  events={fatalEvents}
+                  timeStart={(priceHistories[activeChartSymbol] || [])[0]?.timestamp ?? Date.now()}
+                  timeEnd={(priceHistories[activeChartSymbol] || []).at(-1)?.timestamp ?? Date.now()}
+                />
               </div>
             </div>
           </div>
@@ -329,7 +404,11 @@ export default function WarRoom() {
 
           {/* Article Detail */}
           <div className="col-span-12 lg:col-span-4">
-            <ArticleDetail article={selectedArticle} profile={profile} prices={prices} />
+            <ArticleDetail
+              article={selectedArticle}
+              profile={profile}
+              prices={prices}
+            />
           </div>
 
           {/* Holdings / Wallet */}
@@ -347,7 +426,9 @@ export default function WarRoom() {
         <div className="border-4 border-white bg-black">
           <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
             <h2 className="text-sm font-bold tracking-widest">TRADE LOG</h2>
-            <span className="text-[10px] text-gray-500">{trades.length} TRADES</span>
+            <span className="text-[10px] text-gray-500">
+              {trades.length} TRADES
+            </span>
           </div>
           {trades.length === 0 ? (
             <div className="px-4 py-8 text-center text-gray-600 text-sm">
@@ -377,16 +458,27 @@ export default function WarRoom() {
                         {new Date(t.ts).toLocaleTimeString()}
                       </td>
                       <td className="px-2 py-2">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 ${
-                          t.side === 'BUY' ? 'bg-white text-black' : 'bg-[#FF0000] text-white'
-                        }`}>
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 ${
+                            t.side === "BUY"
+                              ? "bg-white text-black"
+                              : "bg-[#FF0000] text-white"
+                          }`}
+                        >
                           {t.side}
                         </span>
                       </td>
-                      <td className="px-2 py-2 font-bold text-sm">{t.symbol}</td>
-                      <td className="px-2 py-2 text-right text-sm">{t.amount.toFixed(6)}</td>
+                      <td className="px-2 py-2 font-bold text-sm">
+                        {t.symbol}
+                      </td>
+                      <td className="px-2 py-2 text-right text-sm">
+                        {t.amount.toFixed(6)}
+                      </td>
                       <td className="px-2 py-2 text-right text-sm font-bold">
-                        ${t.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        $
+                        {t.price.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
                       </td>
                     </motion.tr>
                   ))}
@@ -425,21 +517,41 @@ export default function WarRoom() {
 // SUB-COMPONENTS
 // ═══════════════════════════════════════════════════════════
 
-function StatCard({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
+function StatCard({
+  label,
+  value,
+  alert = false,
+}: {
+  label: string;
+  value: string;
+  alert?: boolean;
+}) {
   return (
     <motion.div
-      className={`border-4 bg-black p-4 ${alert ? 'border-[#FF0000]' : 'border-white'}`}
-      animate={alert ? { borderColor: ['#FF0000', '#CC0000', '#FF0000'] } : {}}
+      className={`border-4 bg-black p-4 ${alert ? "border-[#FF0000]" : "border-white"}`}
+      animate={alert ? { borderColor: ["#FF0000", "#CC0000", "#FF0000"] } : {}}
       transition={alert ? { repeat: Infinity, duration: 0.8 } : {}}
     >
-      <div className="text-[10px] text-gray-500 font-bold tracking-widest mb-1">{label}</div>
-      <div className={`text-lg font-bold ${alert ? 'text-[#FF0000]' : 'text-white'}`}>{value}</div>
+      <div className="text-[10px] text-gray-500 font-bold tracking-widest mb-1">
+        {label}
+      </div>
+      <div
+        className={`text-lg font-bold ${alert ? "text-[#FF0000]" : "text-white"}`}
+      >
+        {value}
+      </div>
     </motion.div>
   );
 }
 
 // ── Inline SVG Price Chart ────────────────────────────────
-function PriceChartSVG({ history, symbol }: { history: PricePoint[]; symbol: string }) {
+function PriceChartSVG({
+  history,
+  symbol,
+}: {
+  history: PricePoint[];
+  symbol: string;
+}) {
   if (history.length < 2) {
     return (
       <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
@@ -463,7 +575,7 @@ function PriceChartSVG({ history, symbol }: { history: PricePoint[]; symbol: str
     return `${x},${y}`;
   });
 
-  const lineStr = points.join(' ');
+  const lineStr = points.join(" ");
   const areaStr = `${pad},${h - pad} ${lineStr} ${pad + ((history.length - 1) / (history.length - 1)) * (w - 2 * pad)},${h - pad}`;
 
   const lastPrice = prices[prices.length - 1];
@@ -471,23 +583,39 @@ function PriceChartSVG({ history, symbol }: { history: PricePoint[]; symbol: str
   const isUp = lastPrice >= firstPrice;
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+    >
       {/* Grid */}
       {[0.25, 0.5, 0.75].map((pct) => {
         const y = pad + pct * (h - 2 * pad);
         return (
-          <line key={pct} x1={pad} y1={y} x2={w - pad} y2={y} stroke="#222" strokeWidth={1} />
+          <line
+            key={pct}
+            x1={pad}
+            y1={y}
+            x2={w - pad}
+            y2={y}
+            stroke="#222"
+            strokeWidth={1}
+          />
         );
       })}
 
       {/* Area fill */}
-      <polygon points={areaStr} fill={isUp ? 'rgba(255,255,255,0.05)' : 'rgba(255,0,0,0.1)'} />
+      <polygon
+        points={areaStr}
+        fill={isUp ? "rgba(255,255,255,0.05)" : "rgba(255,0,0,0.1)"}
+      />
 
       {/* Price line */}
       <polyline
         points={lineStr}
         fill="none"
-        stroke={isUp ? '#FFFFFF' : '#FF0000'}
+        stroke={isUp ? "#FFFFFF" : "#FF0000"}
         strokeWidth={2}
       />
 
@@ -497,38 +625,60 @@ function PriceChartSVG({ history, symbol }: { history: PricePoint[]; symbol: str
         y={pad + (1 - (lastPrice - minP) / range) * (h - 2 * pad) - 8}
         textAnchor="end"
         className="text-[10px] font-bold"
-        fill={isUp ? '#FFFFFF' : '#FF0000'}
+        fill={isUp ? "#FFFFFF" : "#FF0000"}
       >
-        ${lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        $
+        {lastPrice.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
       </text>
 
       {/* Price range labels */}
-      <text x={5} y={pad} className="text-[8px]" fill="#555">${maxP.toFixed(2)}</text>
-      <text x={5} y={h - pad + 12} className="text-[8px]" fill="#555">${minP.toFixed(2)}</text>
+      <text x={5} y={pad} className="text-[8px]" fill="#555">
+        ${maxP.toFixed(2)}
+      </text>
+      <text x={5} y={h - pad + 12} className="text-[8px]" fill="#555">
+        ${minP.toFixed(2)}
+      </text>
     </svg>
   );
 }
 
 // ── Article Detail Panel ──────────────────────────────────
-function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | null; profile: RiskProfile; prices: Record<string, number> }) {
+function ArticleDetail({
+  article,
+  profile,
+  prices,
+}: {
+  article: NewsAnalysis | null;
+  profile: RiskProfile;
+  prices: Record<string, number>;
+}) {
   if (!article) {
     return (
       <div className="border-4 border-white bg-black h-full flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-gray-600 text-4xl mb-4">◉</div>
-          <p className="text-gray-600 text-sm">SELECT AN ARTICLE FROM THE BULLETIN</p>
+          <p className="text-gray-600 text-sm">
+            SELECT AN ARTICLE FROM THE BULLETIN
+          </p>
         </div>
       </div>
     );
   }
 
-  const isLethal = article.sentiment === 'LETHAL';
-  const isSell = article.action === 'SELL';
+  const isLethal = article.sentiment === "LETHAL";
+  const isSell = article.action === "SELL";
 
   return (
     <motion.div
       className={`border-4 bg-black h-full flex flex-col ${
-        isLethal ? 'border-[#FF0000]' : isSell ? 'border-[#FF6666]' : 'border-white'
+        isLethal
+          ? "border-[#FF0000]"
+          : isSell
+            ? "border-[#FF6666]"
+            : "border-white"
       }`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -538,11 +688,15 @@ function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | n
       <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
         <span className="text-sm font-bold text-white">INTEL REPORT</span>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 ${
-            article.sentiment === 'LETHAL' ? 'bg-[#FF0000] text-white' :
-            article.sentiment === 'BEARISH' ? 'bg-[#FF6666] text-white' :
-            'bg-green-600 text-white'
-          }`}>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 ${
+              article.sentiment === "LETHAL"
+                ? "bg-[#FF0000] text-white"
+                : article.sentiment === "BEARISH"
+                  ? "bg-[#FF6666] text-white"
+                  : "bg-green-600 text-white"
+            }`}
+          >
             {article.sentiment}
           </span>
         </div>
@@ -551,46 +705,73 @@ function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | n
       {/* Body */}
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">
         {/* Headline */}
-        <h3 className={`text-lg font-bold leading-tight ${isLethal ? 'text-[#FF0000]' : 'text-white'}`}>
+        <h3
+          className={`text-lg font-bold leading-tight ${isLethal ? "text-[#FF0000]" : "text-white"}`}
+        >
           {article.original.headline}
         </h3>
 
         {/* Scores Grid */}
         <div className="grid grid-cols-2 gap-2">
-          <ScoreMeter label="GLOBAL SCORE" value={article.global_score} max={10} />
-          <ScoreMeter label="PORTFOLIO THREAT" value={article.portfolio_threat} max={10} danger />
+          <ScoreMeter
+            label="GLOBAL SCORE"
+            value={article.global_score}
+            max={10}
+          />
+          <ScoreMeter
+            label="PORTFOLIO THREAT"
+            value={article.portfolio_threat}
+            max={10}
+            danger
+          />
         </div>
 
         {/* Full Content */}
         <div className="border-2 border-gray-800 p-3">
-          <p className="text-xs text-gray-400 leading-relaxed">{article.original.full_content}</p>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            {article.original.full_content}
+          </p>
         </div>
 
         {/* AI Reasoning */}
         <div className="border-2 border-[#FF0000] p-3 bg-[#1a0000]">
-          <div className="text-[10px] text-[#FF0000] font-bold mb-1">AI REASONING</div>
+          <div className="text-[10px] text-[#FF0000] font-bold mb-1">
+            AI REASONING
+          </div>
           <p className="text-sm font-bold text-white">{article.reasoning}</p>
         </div>
 
         {/* Action */}
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-gray-500 font-bold">RECOMMENDED ACTION:</span>
-          <span className={`text-sm font-bold px-3 py-1 border-2 ${
-            article.action === 'SELL' ? 'border-[#FF0000] text-[#FF0000]' :
-            article.action === 'BUY' ? 'border-white text-white' :
-            article.action === 'REBALANCE' ? 'border-[#D4AF37] text-[#D4AF37]' :
-            'border-gray-600 text-gray-400'
-          }`}>
+          <span className="text-[10px] text-gray-500 font-bold">
+            RECOMMENDED ACTION:
+          </span>
+          <span
+            className={`text-sm font-bold px-3 py-1 border-2 ${
+              article.action === "SELL"
+                ? "border-[#FF0000] text-[#FF0000]"
+                : article.action === "BUY"
+                  ? "border-white text-white"
+                  : article.action === "REBALANCE"
+                    ? "border-[#D4AF37] text-[#D4AF37]"
+                    : "border-gray-600 text-gray-400"
+            }`}
+          >
             {article.action}
           </span>
         </div>
 
         {/* Affected Assets */}
         <div>
-          <div className="text-[10px] text-gray-500 font-bold mb-2">AFFECTED ASSETS</div>
+          <div className="text-[10px] text-gray-500 font-bold mb-2">
+            AFFECTED ASSETS
+          </div>
           <div className="flex gap-2 flex-wrap">
             {article.affected_assets.map((sym) => (
-              <span key={sym} className="text-xs font-bold px-2 py-1 border-2 border-white text-white">
+              <span
+                key={sym}
+                className="text-xs font-bold px-2 py-1 border-2 border-white text-white"
+              >
                 {sym}
               </span>
             ))}
@@ -598,54 +779,78 @@ function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | n
         </div>
 
         {/* Potential Net Profit */}
-        {article.affected_assets.length > 0 && (() => {
-          const sym = article.affected_assets[0];
-          const price = prices[sym];
-          if (!price) return null;
-          // Simulate a second-exchange price with a small drift
-          const drift = (Math.random() - 0.5) * 0.008 * price;
-          const altPrice = price + drift;
-          const result = calculateNetProfit({ priceA: price, priceB: altPrice });
-          return (
-            <div className={`border-2 p-3 ${result.shouldTrade ? 'border-green-600 bg-green-950' : 'border-gray-700 bg-gray-950'}`}>
-              <div className="text-[10px] font-bold mb-2 uppercase" style={{ color: result.shouldTrade ? '#22c55e' : '#ef4444' }}>
-                POTENTIAL NET PROFIT — {sym}
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <div className="text-[9px] text-gray-500">RAW SPREAD</div>
-                  <div className="text-sm font-bold text-white">${result.rawSpread.toLocaleString()}</div>
-                  <div className="text-[9px] text-gray-500">{result.rawSpreadPct.toFixed(3)}%</div>
+        {article.affected_assets.length > 0 &&
+          (() => {
+            const sym = article.affected_assets[0];
+            const price = prices[sym];
+            if (!price) return null;
+            // Simulate a second-exchange price with a small drift
+            const drift = (Math.random() - 0.5) * 0.008 * price;
+            const altPrice = price + drift;
+            const result = calculateNetProfit({
+              priceA: price,
+              priceB: altPrice,
+            });
+            return (
+              <div
+                className={`border-2 p-3 ${result.shouldTrade ? "border-green-600 bg-green-950" : "border-gray-700 bg-gray-950"}`}
+              >
+                <div
+                  className="text-[10px] font-bold mb-2 uppercase"
+                  style={{ color: result.shouldTrade ? "#22c55e" : "#ef4444" }}
+                >
+                  POTENTIAL NET PROFIT — {sym}
                 </div>
-                <div>
-                  <div className="text-[9px] text-gray-500">FEES + SLIP</div>
-                  <div className="text-sm font-bold text-[#FF6666]">-${result.totalCost.toLocaleString()}</div>
-                  <div className="text-[9px] text-gray-500">{result.totalCostPct.toFixed(3)}%</div>
-                </div>
-                <div>
-                  <div className="text-[9px] text-gray-500">NET P&L</div>
-                  <div className={`text-sm font-bold ${result.netProfit > 0 ? 'text-green-400' : 'text-[#FF0000]'}`}>
-                    {result.netProfit > 0 ? '+' : ''}${result.netProfit.toLocaleString()}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-[9px] text-gray-500">RAW SPREAD</div>
+                    <div className="text-sm font-bold text-white">
+                      ${result.rawSpread.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-gray-500">
+                      {result.rawSpreadPct.toFixed(3)}%
+                    </div>
                   </div>
-                  <div className="text-[9px] text-gray-500">{result.netProfitPct.toFixed(3)}%</div>
+                  <div>
+                    <div className="text-[9px] text-gray-500">FEES + SLIP</div>
+                    <div className="text-sm font-bold text-[#FF6666]">
+                      -${result.totalCost.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-gray-500">
+                      {result.totalCostPct.toFixed(3)}%
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-gray-500">NET P&L</div>
+                    <div
+                      className={`text-sm font-bold ${result.netProfit > 0 ? "text-green-400" : "text-[#FF0000]"}`}
+                    >
+                      {result.netProfit > 0 ? "+" : ""}$
+                      {result.netProfit.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-gray-500">
+                      {result.netProfitPct.toFixed(3)}%
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 text-center">
+                  <span
+                    className={`text-[10px] font-black px-2 py-0.5 border-2 ${
+                      result.shouldTrade
+                        ? "border-green-500 text-green-400"
+                        : "border-[#FF0000] text-[#FF0000]"
+                    }`}
+                  >
+                    {result.shouldTrade ? "✓ TRADE VIABLE" : "✗ NOT PROFITABLE"}
+                  </span>
                 </div>
               </div>
-              <div className="mt-2 text-center">
-                <span className={`text-[10px] font-black px-2 py-0.5 border-2 ${
-                  result.shouldTrade
-                    ? 'border-green-500 text-green-400'
-                    : 'border-[#FF0000] text-[#FF0000]'
-                }`}>
-                  {result.shouldTrade ? '✓ TRADE VIABLE' : '✗ NOT PROFITABLE'}
-                </span>
-              </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* Source */}
         <div className="text-[10px] text-gray-600">
-          SOURCE: {article.original.source} • {article.original.category} •{' '}
+          SOURCE: {article.original.source} • {article.original.category} •{" "}
           {new Date(article.timestamp).toLocaleString()}
         </div>
       </div>
@@ -653,7 +858,17 @@ function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | n
   );
 }
 
-function ScoreMeter({ label, value, max, danger = false }: { label: string; value: number; max: number; danger?: boolean }) {
+function ScoreMeter({
+  label,
+  value,
+  max,
+  danger = false,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  danger?: boolean;
+}) {
   const pct = (value / max) * 100;
   const isHigh = value >= 7;
 
@@ -661,12 +876,14 @@ function ScoreMeter({ label, value, max, danger = false }: { label: string; valu
     <div className="border-2 border-gray-800 p-2">
       <div className="text-[9px] text-gray-500 font-bold mb-1">{label}</div>
       <div className="flex items-center gap-2">
-        <div className={`text-xl font-bold ${danger && isHigh ? 'text-[#FF0000]' : 'text-white'}`}>
+        <div
+          className={`text-xl font-bold ${danger && isHigh ? "text-[#FF0000]" : "text-white"}`}
+        >
           {value}
         </div>
         <div className="flex-1 h-2 bg-gray-900">
           <motion.div
-            className={`h-full ${danger && isHigh ? 'bg-[#FF0000]' : pct > 70 ? 'bg-[#D4AF37]' : 'bg-white'}`}
+            className={`h-full ${danger && isHigh ? "bg-[#FF0000]" : pct > 70 ? "bg-[#D4AF37]" : "bg-white"}`}
             initial={{ width: 0 }}
             animate={{ width: `${pct}%` }}
           />
@@ -692,7 +909,10 @@ function HoldingsPanel({
   // Determine which held assets are under threat
   const threatenedSymbols = new Set<string>();
   analyses.forEach((a) => {
-    if (a.threat_level >= 7 && (a.sentiment === 'BEARISH' || a.sentiment === 'LETHAL')) {
+    if (
+      a.threat_level >= 7 &&
+      (a.sentiment === "BEARISH" || a.sentiment === "LETHAL")
+    ) {
       a.affected_assets.forEach((sym) => {
         if (holdings[sym] && holdings[sym] > 0) threatenedSymbols.add(sym);
       });
@@ -704,15 +924,22 @@ function HoldingsPanel({
   return (
     <div className="border-4 border-white bg-black h-full flex flex-col">
       <div className="border-b-4 border-white px-4 py-2">
-        <h2 className="text-sm font-bold tracking-widest text-white">HOLDINGS</h2>
+        <h2 className="text-sm font-bold tracking-widest text-white">
+          HOLDINGS
+        </h2>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Cash */}
         <div className="border-b-2 border-gray-800 px-4 py-3">
-          <div className="text-[10px] text-gray-500 font-bold">USDT BALANCE</div>
+          <div className="text-[10px] text-gray-500 font-bold">
+            USDT BALANCE
+          </div>
           <div className="text-lg font-bold text-white">
-            ${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            $
+            {walletBalance.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}
           </div>
         </div>
 
@@ -726,10 +953,18 @@ function HoldingsPanel({
             <motion.div
               key={sym}
               className={`border-b-2 px-4 py-3 ${
-                isThreatened ? 'border-[#FF0000] bg-[#1a0000]' : 'border-gray-800'
+                isThreatened
+                  ? "border-[#FF0000] bg-[#1a0000]"
+                  : "border-gray-800"
               }`}
-              animate={isThreatened ? { borderColor: ['#FF0000', '#660000', '#FF0000'] } : {}}
-              transition={isThreatened ? { repeat: Infinity, duration: 0.8 } : {}}
+              animate={
+                isThreatened
+                  ? { borderColor: ["#FF0000", "#660000", "#FF0000"] }
+                  : {}
+              }
+              transition={
+                isThreatened ? { repeat: Infinity, duration: 0.8 } : {}
+              }
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -744,12 +979,22 @@ function HoldingsPanel({
                     </motion.span>
                   )}
                 </div>
-                <span className="text-sm font-bold">${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="text-sm font-bold">
+                  $
+                  {value.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
               </div>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-gray-500">{amt.toFixed(6)} {sym}</span>
                 <span className="text-[10px] text-gray-500">
-                  @ ${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {amt.toFixed(6)} {sym}
+                </span>
+                <span className="text-[10px] text-gray-500">
+                  @ $
+                  {price.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             </motion.div>

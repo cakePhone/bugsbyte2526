@@ -128,27 +128,46 @@ export default function ActionOverlay({
 // ── Fatal Event Line (for embedding in charts) ───────────
 export function FatalEventLine({
   events,
+  timeStart,
+  timeEnd,
 }: {
   events: Array<{ timestamp: number; headline: string }>;
+  /** Earliest timestamp visible on the chart */
+  timeStart: number;
+  /** Latest timestamp visible on the chart */
+  timeEnd: number;
 }) {
   if (events.length === 0) return null;
 
+  const span = timeEnd - timeStart || 1;
+  // Chart uses ~2.86% padding on each side (20/700), mirror that here
+  const padPct = 2.86;
+  const usable = 100 - padPct * 2;
+
   return (
     <div className="absolute inset-0 pointer-events-none">
-      {events.map((event, i) => (
-        <motion.div
-          key={`${event.timestamp}-${i}`}
-          className="absolute top-0 bottom-0 flex flex-col items-center"
-          style={{ left: `${50 + i * 10}%` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="w-[2px] h-full bg-[#FF0000]" />
-          <div className="absolute top-2 -translate-x-1/2 bg-[#FF0000] text-white text-[8px] font-bold px-1.5 py-0.5 whitespace-nowrap">
-            FATAL EVENT DETECTED
-          </div>
-        </motion.div>
-      ))}
+      {events
+        .filter((e) => e.timestamp >= timeStart && e.timestamp <= timeEnd)
+        .map((event, i) => {
+          const pct = padPct + ((event.timestamp - timeStart) / span) * usable;
+          return (
+            <motion.div
+              key={`${event.timestamp}-${i}`}
+              className="absolute top-0 bottom-0 flex flex-col items-center"
+              style={{ left: `${pct}%` }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="w-[2px] h-full bg-[#FF0000]" />
+              <div className="absolute top-2 -translate-x-1/2 bg-[#FF0000] text-white text-[8px] font-bold px-1.5 py-0.5 whitespace-nowrap">
+                FATAL EVENT DETECTED
+              </div>
+              <div className="absolute bottom-2 -translate-x-1/2 max-w-[120px] truncate bg-black/80 text-[#FF0000] text-[7px] font-bold px-1 py-0.5 whitespace-nowrap">
+                {event.headline}
+              </div>
+            </motion.div>
+          );
+        })}
     </div>
   );
 }
