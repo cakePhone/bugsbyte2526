@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import WarRoomLayout from "@/components/dashboard/WarRoomLayout";
 import TacticalHoldings from "@/components/dashboard/TacticalHoldings";
 import SuperpositionedGraph from "@/components/dashboard/SuperpositionedGraph";
+import WorldClock from "@/components/WorldClock";
 import IntelligenceExchangeBar, {
   generateMockExchangeQuotes,
 } from "@/components/dashboard/IntelligenceExchangeBar";
@@ -317,18 +318,23 @@ function WarRoomContent() {
       style={{ gridTemplateColumns: "25% 75%" }}
     >
       {/* Left Sidebar - Tactical Holdings (25% width) */}
-      <div className="grid">
-        <TacticalHoldings
-          holdings={holdings}
-          balanceUsdt={balanceUsdt}
-          prices={prices}
-          holdingValuesUsdt={holdingValuesUsdt}
-          holdingValuesDisplay={holdingValuesDisplay}
-          currency={displayCurrency}
-          threatenedSymbols={threatenedSymbols}
-          priceChanges24h={{}}
-          onSellRequest={handleSellRequest}
-        />
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <TacticalHoldings
+            holdings={holdings}
+            balanceUsdt={balanceUsdt}
+            prices={prices}
+            holdingValuesUsdt={holdingValuesUsdt}
+            holdingValuesDisplay={holdingValuesDisplay}
+            currency={displayCurrency}
+            threatenedSymbols={threatenedSymbols}
+            priceChanges24h={{}}
+            onSellRequest={handleSellRequest}
+          />
+        </div>
+        <div className="flex-shrink-0">
+          <WorldClock />
+        </div>
       </div>
 
       {/* Main Content Area (75% width) */}
