@@ -37,7 +37,7 @@ export default function WarRoomLayout({
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 flex">{children}</main>
+        <main className="flex-1 flex pb-10">{children}</main>
 
         {/* War Room Footer with World Clock */}
         <WarRoomFooter

@@ -45,6 +45,7 @@ interface RiskProfile {
 }
 
 type ValuationCurrency = "USDT" | "EUR";
+type FontSize = "very-small" | "small" | "normal" | "big";
 
 export default function BaseOfOperations() {
   const router = useRouter();
@@ -52,6 +53,9 @@ export default function BaseOfOperations() {
   // Auth
   const [authChecked, setAuthChecked] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+
+  // Display Preferences
+  const [fontSize, setFontSize] = useState<FontSize>("very-small");
 
   // Password
   const [currentPw, setCurrentPw] = useState("");
@@ -117,6 +121,16 @@ export default function BaseOfOperations() {
           } catch (e) {
             console.error("Failed to parse accounts:", e);
           }
+        }
+
+        // Load font size preference from localStorage
+        const savedFontSize = localStorage.getItem("geisha_font_size") as FontSize;
+        if (savedFontSize) {
+          setFontSize(savedFontSize);
+          document.documentElement.setAttribute("data-font-size", savedFontSize);
+        } else {
+          // Set default to very-small
+          document.documentElement.setAttribute("data-font-size", "very-small");
         }
       } catch {
         router.push("/");
@@ -198,6 +212,13 @@ export default function BaseOfOperations() {
     localStorage.removeItem("geisha_risk_profile");
     router.push("/");
   }, [router]);
+
+  // ── Font Size Management ────────────────────────────────
+  const handleFontSizeChange = (size: FontSize) => {
+    setFontSize(size);
+    localStorage.setItem("geisha_font_size", size);
+    document.documentElement.setAttribute("data-font-size", size);
+  };
 
   // ── Account Management ──────────────────────────────────
   const handleManageAccounts = () => {
@@ -316,6 +337,46 @@ export default function BaseOfOperations() {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-6 pb-20">
+        {/* ── DISPLAY PREFERENCES ── */}
+        <div className="border-4 border-gray-300 bg-black">
+          <div className="border-b-4 border-gray-300 px-4 py-2">
+            <span className="text-xs font-bold tracking-widest text-[#DD0000]">
+              DISPLAY PREFERENCES
+            </span>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="text-xs text-gray-300 uppercase tracking-widest mb-2">
+              FONT SIZE
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: "very-small" as FontSize, label: "VERY SMALL" },
+                { value: "small" as FontSize, label: "SMALL" },
+                { value: "normal" as FontSize, label: "NORMAL" },
+                { value: "big" as FontSize, label: "BIG" },
+              ].map((opt) => {
+                const selected = fontSize === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleFontSizeChange(opt.value)}
+                    className={`border-4 px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
+                      selected
+                        ? "border-[#C9A832] bg-[#C9A832] text-black"
+                        : "border-gray-300 hover:border-gray-300 text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-xs text-gray-300 mt-2">
+              {">"}  CURRENT: <span className="text-white font-bold">{fontSize.toUpperCase()}</span>
+            </div>
+          </div>
+        </div>
+
         {/* ── OPERATOR MANAGER ── */}
         <div className="border-4 border-gray-300 bg-black">
           <div className="border-b-4 border-gray-300 px-4 py-2">

@@ -65,6 +65,23 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Font Size Variants ──────────────────────────────────── */
+html[data-font-size="very-small"] {
+  font-size: 12px;
+}
+
+html[data-font-size="small"] {
+  font-size: 14px;
+}
+
+html[data-font-size="normal"] {
+  font-size: 16px;
+}
+
+html[data-font-size="big"] {
+  font-size: 18px;
+}
+
 body {
   margin: 0;
   padding: 0;

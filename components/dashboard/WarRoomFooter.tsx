@@ -31,7 +31,7 @@ export default function WarRoomFooter({
   }[connectionStatus];
 
   return (
-    <footer className="h-10 border-t-4 border-white bg-black flex items-center justify-between px-4 font-mono">
+    <footer className="h-10 border-t-4 border-white bg-black flex items-center justify-between px-4 font-mono fixed bottom-0 left-0 right-0 z-40">
       {/* Left Side - Status */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
