@@ -252,7 +252,9 @@ export default function WarRoom() {
             <TradeLog transactions={orders} />
           </div>
 
-          <div className="col-span-12 xl:col-span-4">
+          <div className="col-span-12 xl:col-span-4 space-y-4">
+            <WorldClock />
+            
             <div className="border-4 border-gray-300 bg-black h-full max-h-[1000px] overflow-y-auto">
               <div className="border-b-4 border-gray-300 px-4 py-2 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-widest">
@@ -443,8 +445,6 @@ export default function WarRoom() {
           </span>
         </div>
       </footer>
-
-      <WorldClock />
 
       <HoldingsTradeModal
         request={pendingHoldingsTrade}
