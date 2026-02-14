@@ -15,6 +15,7 @@ import PriceChartSVG from "@/components/dashboard/PriceChartSVG";
 import ArticleDetailPanel from "@/components/dashboard/ArticleDetailPanel";
 import HoldingsPanel from "@/components/dashboard/HoldingsPanel";
 import HoldingsTradeModal from "@/components/dashboard/HoldingsTradeModal";
+import WorldClock from "@/components/WorldClock";
 import ExchangeSpreadTable from "@/components/ExchangeSpreadTable";
 import { TradeLog } from "@/components/TradeLog";
 import { formatMoney } from "@/components/dashboard/formatting";
@@ -425,6 +426,8 @@ export default function WarRoom() {
           </span>
         </div>
       </footer>
+
+      <WorldClock />
 
       <HoldingsTradeModal
         request={pendingHoldingsTrade}
