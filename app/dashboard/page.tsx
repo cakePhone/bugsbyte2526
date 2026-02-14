@@ -305,9 +305,12 @@ function WarRoomContent() {
   }
 
   return (
-    <div className="flex-1 flex h-full">
+    <div
+      className="grid grid-cols-2 w-screen gap-0 max-h-[100vh - 200px]"
+      style={{ gridTemplateColumns: "25% 75%" }}
+    >
       {/* Left Sidebar - Tactical Holdings (25% width) */}
-      <div className="w-1/4 min-w-[280px] max-w-[400px]">
+      <div className="grid">
         <TacticalHoldings
           holdings={holdings}
           balanceUsdt={balanceUsdt}
@@ -322,18 +325,16 @@ function WarRoomContent() {
       </div>
 
       {/* Main Content Area (75% width) */}
-      <div className="flex flex-col p-4 gap-4 w-full h-full">
+      <div className="grid p-4 gap-4">
         {/* Superpositioned Graph Viewer - shrinks when exchange bar expands */}
-        <div className="flex-1 min-h-[350px]" id="graph-viewer">
-          <SuperpositionedGraph
-            priceHistories={priceHistories}
-            currentPrices={prices}
-            availableAssets={chartableCoins}
-            aiPredictions={aiPredictions}
-            apiErrors={apiErrors}
-            purchasePrices={purchasePrices}
-          />
-        </div>
+        <SuperpositionedGraph
+          priceHistories={priceHistories}
+          currentPrices={prices}
+          availableAssets={chartableCoins}
+          aiPredictions={aiPredictions}
+          apiErrors={apiErrors}
+          purchasePrices={purchasePrices}
+        />
 
         {/* Intelligence Exchange Bar - fixed at bottom, doesn't overlap chart */}
         <IntelligenceExchangeBar
