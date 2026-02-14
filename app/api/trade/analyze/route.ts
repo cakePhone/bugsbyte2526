@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { fetchAllPrices } from '@/lib/uphold-api';
 import { analyzeMarketWithNIM } from '@/lib/nvidia-nim';
+import { getPrices } from '@/lib/market-aggregator';
+import { calculateNetProfit } from '@/lib/market-aggregator/netProfit';
 
 interface AnalyzeRequest {
   userId: string;
@@ -69,7 +71,48 @@ export async function POST(request: NextRequest) {
 
     const executedTrades = [];
 
-    // 5. Execute trades based on analysis and Overdrive state
+    // 5. Check for cross-exchange spread opportunities (Simultaneous Execution)
+    try {
+      const aggregated = await getPrices();
+      const btcAnalysis = analyses.find((a) => a.symbol === 'BTC');
+
+      if (btcAnalysis) {
+        const { exchangeA, exchangeB } = aggregated;
+        const cheapExchange = exchangeA.mid <= exchangeB.mid ? exchangeA : exchangeB;
+        const expensiveExchange = exchangeA.mid > exchangeB.mid ? exchangeA : exchangeB;
+
+        const profitCheck = calculateNetProfit({
+          priceA: cheapExchange.mid,
+          priceB: expensiveExchange.mid,
+        });
+
+        if (profitCheck.shouldTrade) {
+          const simTrade = await executeSimultaneousTrade(
+            userId,
+            'BTC',
+            cheapExchange.mid,      // buy on cheaper
+            expensiveExchange.mid,   // sell on more expensive
+            cheapExchange.exchange,
+            expensiveExchange.exchange,
+            isOverdrive,
+            btcAnalysis.confidence,
+            `Spread ${profitCheck.rawSpreadPct.toFixed(3)}% → Net ${profitCheck.netProfitPct.toFixed(3)}% after fees`
+          );
+
+          if (simTrade) {
+            executedTrades.push(simTrade.buyTx, simTrade.sellTx);
+
+            // Refresh wallet after simultaneous trade
+            wallet = await prisma.wallet.findUnique({ where: { userId } });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Simultaneous execution check failed:', err);
+      // Fall through to single-leg logic below
+    }
+
+    // 6. Execute remaining single-leg trades based on analysis
     for (const analysis of analyses) {
       const marketPrice = marketPrices.find((p) => p.symbol === analysis.symbol);
       if (!marketPrice) continue;
@@ -140,7 +183,104 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Execute a trade and update wallet
+ * Execute a simultaneous BUY on Exchange A / SELL on Exchange B
+ * inside a single Prisma interactive transaction for atomicity.
+ */
+async function executeSimultaneousTrade(
+  userId: string,
+  symbol: string,
+  buyPrice: number,
+  sellPrice: number,
+  buyExchange: string,
+  sellExchange: string,
+  isOverdrive: boolean,
+  confidence: number,
+  reasoning: string
+) {
+  // Pre-flight: make sure the spread is actually profitable
+  const profitCheck = calculateNetProfit({ priceA: buyPrice, priceB: sellPrice });
+  if (!profitCheck.shouldTrade) return null;
+
+  return prisma.$transaction(async (tx) => {
+    const wallet = await tx.wallet.findUnique({ where: { userId } });
+    if (!wallet) throw new Error('Wallet not found');
+
+    const assets = wallet.assets as Record<string, number>;
+    const holdings = assets[symbol] || 0;
+
+    // --- BUY leg (Exchange A) ---
+    const spendAmount = wallet.balanceUsdt * 0.1; // 10 % of USDT balance
+    if (spendAmount <= 0) throw new Error('Insufficient USDT balance');
+    const buyAmount = spendAmount / buyPrice;
+
+    // --- SELL leg (Exchange B) ---
+    // Sell the same quantity we just bought so the position nets out
+    const sellAmount = buyAmount;
+    const sellValue = sellAmount * sellPrice;
+    const pnl = sellValue - spendAmount; // realised P&L for the round-trip
+
+    // Update wallet atomically: debit buy cost, credit sell proceeds
+    const newAssets = { ...assets };
+    // Holdings stay flat (bought and sold same qty) but reflect any
+    // residual rounding if amounts differ in the future.
+    newAssets[symbol] = holdings; // net zero change
+
+    await tx.wallet.update({
+      where: { userId },
+      data: {
+        balanceUsdt: wallet.balanceUsdt - spendAmount + sellValue,
+        assets: newAssets,
+        totalPnL: wallet.totalPnL + pnl,
+      },
+    });
+
+    // Record BUY transaction
+    const buyTx = await tx.transaction.create({
+      data: {
+        userId,
+        symbol,
+        type: 'BUY',
+        amount: buyAmount,
+        price: buyPrice,
+        totalValue: spendAmount,
+        pnl: null,
+        exchange: buyExchange,
+        isOverdrive,
+        confidence,
+        reasoning: `[SIMULTANEOUS BUY] ${reasoning}`,
+      },
+    });
+
+    // Record SELL transaction, linked to the buy leg
+    const sellTx = await tx.transaction.create({
+      data: {
+        userId,
+        symbol,
+        type: 'SELL',
+        amount: sellAmount,
+        price: sellPrice,
+        totalValue: sellValue,
+        pnl,
+        exchange: sellExchange,
+        linkedTxId: buyTx.id,
+        isOverdrive,
+        confidence,
+        reasoning: `[SIMULTANEOUS SELL] ${reasoning}`,
+      },
+    });
+
+    // Back-link the buy to the sell
+    await tx.transaction.update({
+      where: { id: buyTx.id },
+      data: { linkedTxId: sellTx.id },
+    });
+
+    return { buyTx, sellTx, pnl };
+  });
+}
+
+/**
+ * Execute a single-leg trade (legacy path for non-arbitrage actions)
  */
 async function executeTrade(
   userId: string,
@@ -151,77 +291,70 @@ async function executeTrade(
   confidence: number,
   reasoning: string
 ) {
-  const wallet = await prisma.wallet.findUnique({
-    where: { userId },
-  });
+  return prisma.$transaction(async (tx) => {
+    const wallet = await tx.wallet.findUnique({ where: { userId } });
+    if (!wallet) return null;
 
-  if (!wallet) return null;
+    const assets = wallet.assets as Record<string, number>;
+    let amount = 0;
+    let totalValue = 0;
+    let pnl = 0;
 
-  const assets = wallet.assets as Record<string, number>;
-  let amount = 0;
-  let totalValue = 0;
-  let pnl = 0;
+    if (type === 'BUY') {
+      const spendAmount = wallet.balanceUsdt * 0.1;
+      amount = spendAmount / price;
+      totalValue = spendAmount;
 
-  if (type === 'BUY') {
-    // Buy with 10% of available USDT
-    const spendAmount = wallet.balanceUsdt * 0.1;
-    amount = spendAmount / price;
-    totalValue = spendAmount;
+      const newAssets = { ...assets };
+      newAssets[symbol] = (newAssets[symbol] || 0) + amount;
 
-    // Update wallet
-    const newAssets = { ...assets };
-    newAssets[symbol] = (newAssets[symbol] || 0) + amount;
+      await tx.wallet.update({
+        where: { userId },
+        data: {
+          balanceUsdt: wallet.balanceUsdt - spendAmount,
+          assets: newAssets,
+        },
+      });
+    } else if (type === 'SELL') {
+      const holdings = assets[symbol] || 0;
+      if (holdings === 0) return null;
 
-    await prisma.wallet.update({
-      where: { userId },
+      amount = holdings * 0.5;
+      totalValue = amount * price;
+      pnl = totalValue * 0.05;
+
+      const newAssets = { ...assets };
+      newAssets[symbol] = holdings - amount;
+      if (newAssets[symbol] === 0) delete newAssets[symbol];
+
+      await tx.wallet.update({
+        where: { userId },
+        data: {
+          balanceUsdt: wallet.balanceUsdt + totalValue,
+          assets: newAssets,
+          totalPnL: wallet.totalPnL + pnl,
+        },
+      });
+    }
+
+    const transaction = await tx.transaction.create({
       data: {
-        balanceUsdt: wallet.balanceUsdt - spendAmount,
-        assets: newAssets,
+        userId,
+        symbol,
+        type,
+        amount,
+        price,
+        totalValue,
+        pnl: type === 'SELL' ? pnl : null,
+        exchange: 'Uphold',
+        isOverdrive,
+        confidence,
+        reasoning,
       },
     });
-  } else if (type === 'SELL') {
-    // Sell 50% of holdings
-    const holdings = assets[symbol] || 0;
-    if (holdings === 0) return null; // Can't sell what we don't have
 
-    amount = holdings * 0.5;
-    totalValue = amount * price;
-
-    // Calculate P&L (simplified - assume average cost)
-    pnl = totalValue * 0.05; // Mock 5% profit
-
-    // Update wallet
-    const newAssets = { ...assets };
-    newAssets[symbol] = holdings - amount;
-    if (newAssets[symbol] === 0) delete newAssets[symbol];
-
-    await prisma.wallet.update({
-      where: { userId },
-      data: {
-        balanceUsdt: wallet.balanceUsdt + totalValue,
-        assets: newAssets,
-        totalPnL: wallet.totalPnL + pnl,
-      },
-    });
-  }
-
-  // Create transaction record
-  const transaction = await prisma.transaction.create({
-    data: {
-      userId,
-      symbol,
-      type,
-      amount,
-      price,
-      totalValue,
-      pnl: type === 'SELL' ? pnl : null,
-      isOverdrive,
-      confidence,
-      reasoning,
-    },
+    return transaction;
   });
-
-  return transaction;
 }
 
 /**

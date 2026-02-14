@@ -49,6 +49,8 @@ model Transaction {
   price       Float    // Execution price
   totalValue  Float    // amount * price
   pnl         Float?   // Profit/Loss for this trade
+  exchange    String?  // Exchange name (Uphold, Binance, etc.)
+  linkedTxId  String?  // ID of the paired leg in a simultaneous execution
   isOverdrive Boolean  @default(false) // Was this executed during Caffeine Overdrive?
   confidence  Int?     // AI confidence score (0-100)
   reasoning   String?  // AI reasoning
