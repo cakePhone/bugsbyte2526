@@ -1,19 +1,19 @@
 /**
  * Geisha Gains - Trade Analysis API Route
  * Coffee Driven Development - BugsByte 2026
- * 
+ *
  * POST /api/trade/analyze
- * 
+ *
  * Fetches prices from Uphold, analyzes with NVIDIA NIM,
  * and executes trades based on confidence or Overdrive state
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { fetchAllPrices } from '@/lib/uphold-api';
-import { analyzeMarketWithNIM } from '@/lib/nvidia-nim';
-import { getPrices } from '@/lib/market-aggregator';
-import { calculateNetProfit } from '@/lib/market-aggregator/netProfit';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { fetchAllPrices } from "@/lib/uphold-api";
+import { analyzeMarketWithNIM } from "@/lib/nvidia-nim";
+import { getPrices } from "@/lib/market-aggregator";
+import { calculateNetProfit } from "@/lib/market-aggregator/netProfit";
 
 interface AnalyzeRequest {
   userId: string;
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
+        { error: "userId is required" },
+        { status: 400 },
       );
     }
 
@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
             price: price.price,
             volume24h: price.volume24h,
             change24h: price.change24h,
-            source: 'uphold',
+            source: "uphold",
           },
-        })
-      )
+        }),
+      ),
     );
 
     // 3. Analyze with NVIDIA NIM
@@ -74,12 +74,14 @@ export async function POST(request: NextRequest) {
     // 5. Check for cross-exchange spread opportunities (Simultaneous Execution)
     try {
       const aggregated = await getPrices();
-      const btcAnalysis = analyses.find((a) => a.symbol === 'BTC');
+      const btcAnalysis = analyses.find((a) => a.symbol === "BTC");
 
       if (btcAnalysis) {
         const { exchangeA, exchangeB } = aggregated;
-        const cheapExchange = exchangeA.mid <= exchangeB.mid ? exchangeA : exchangeB;
-        const expensiveExchange = exchangeA.mid > exchangeB.mid ? exchangeA : exchangeB;
+        const cheapExchange =
+          exchangeA.mid <= exchangeB.mid ? exchangeA : exchangeB;
+        const expensiveExchange =
+          exchangeA.mid > exchangeB.mid ? exchangeA : exchangeB;
 
         const profitCheck = calculateNetProfit({
           priceA: cheapExchange.mid,
@@ -89,14 +91,14 @@ export async function POST(request: NextRequest) {
         if (profitCheck.shouldTrade) {
           const simTrade = await executeSimultaneousTrade(
             userId,
-            'BTC',
-            cheapExchange.mid,      // buy on cheaper
-            expensiveExchange.mid,   // sell on more expensive
+            "BTC",
+            cheapExchange.mid, // buy on cheaper
+            expensiveExchange.mid, // sell on more expensive
             cheapExchange.exchange,
             expensiveExchange.exchange,
             isOverdrive,
             btcAnalysis.confidence,
-            `Spread ${profitCheck.rawSpreadPct.toFixed(3)}% → Net ${profitCheck.netProfitPct.toFixed(3)}% after fees`
+            `Spread ${profitCheck.rawSpreadPct.toFixed(3)}% → Net ${profitCheck.netProfitPct.toFixed(3)}% after fees`,
           );
 
           if (simTrade) {
@@ -108,13 +110,15 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (err) {
-      console.error('Simultaneous execution check failed:', err);
+      console.error("Simultaneous execution check failed:", err);
       // Fall through to single-leg logic below
     }
 
     // 6. Execute remaining single-leg trades based on analysis
     for (const analysis of analyses) {
-      const marketPrice = marketPrices.find((p) => p.symbol === analysis.symbol);
+      const marketPrice = marketPrices.find(
+        (p) => p.symbol === analysis.symbol,
+      );
       if (!marketPrice) continue;
 
       let shouldExecute = false;
@@ -123,15 +127,15 @@ export async function POST(request: NextRequest) {
         // OVERDRIVE MODE: Execute any trade where current price suggests profit
         const assets = wallet.assets as Record<string, number>;
         const holdings = assets[analysis.symbol] || 0;
-        
+
         // Simple logic: If we have holdings and price is up, sell
         // If we don't have holdings and price is down, buy
         if (holdings > 0 && marketPrice.change24h > 0) {
           shouldExecute = true;
-          analysis.action = 'SELL';
+          analysis.action = "SELL";
         } else if (holdings === 0 && marketPrice.change24h < -2) {
           shouldExecute = true;
-          analysis.action = 'BUY';
+          analysis.action = "BUY";
         }
       } else {
         // NORMAL MODE: Execute only if AI confidence > 75
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
 
       if (shouldExecute) {
         // Skip HOLD actions - only execute BUY or SELL
-        if (analysis.action === 'HOLD') {
+        if (analysis.action === "HOLD") {
           continue;
         }
 
@@ -151,12 +155,12 @@ export async function POST(request: NextRequest) {
           marketPrice.price,
           isOverdrive,
           analysis.confidence,
-          analysis.reasoning
+          analysis.reasoning,
         );
-        
+
         if (trade) {
           executedTrades.push(trade);
-          
+
           // Refresh wallet after trade
           wallet = await prisma.wallet.findUnique({
             where: { userId },
@@ -174,10 +178,13 @@ export async function POST(request: NextRequest) {
       isOverdrive,
     });
   } catch (error) {
-    console.error('Trade analysis error:', error);
+    console.error("Trade analysis error:", error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }
@@ -195,22 +202,25 @@ async function executeSimultaneousTrade(
   sellExchange: string,
   isOverdrive: boolean,
   confidence: number,
-  reasoning: string
+  reasoning: string,
 ) {
   // Pre-flight: make sure the spread is actually profitable
-  const profitCheck = calculateNetProfit({ priceA: buyPrice, priceB: sellPrice });
+  const profitCheck = calculateNetProfit({
+    priceA: buyPrice,
+    priceB: sellPrice,
+  });
   if (!profitCheck.shouldTrade) return null;
 
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
-    if (!wallet) throw new Error('Wallet not found');
+    if (!wallet) throw new Error("Wallet not found");
 
     const assets = wallet.assets as Record<string, number>;
     const holdings = assets[symbol] || 0;
 
     // --- BUY leg (Exchange A) ---
     const spendAmount = wallet.balanceUsdt * 0.1; // 10 % of USDT balance
-    if (spendAmount <= 0) throw new Error('Insufficient USDT balance');
+    if (spendAmount <= 0) throw new Error("Insufficient USDT balance");
     const buyAmount = spendAmount / buyPrice;
 
     // --- SELL leg (Exchange B) ---
@@ -239,7 +249,7 @@ async function executeSimultaneousTrade(
       data: {
         userId,
         symbol,
-        type: 'BUY',
+        type: "BUY",
         amount: buyAmount,
         price: buyPrice,
         totalValue: spendAmount,
@@ -256,7 +266,7 @@ async function executeSimultaneousTrade(
       data: {
         userId,
         symbol,
-        type: 'SELL',
+        type: "SELL",
         amount: sellAmount,
         price: sellPrice,
         totalValue: sellValue,
@@ -285,11 +295,11 @@ async function executeSimultaneousTrade(
 async function executeTrade(
   userId: string,
   symbol: string,
-  type: 'BUY' | 'SELL',
+  type: "BUY" | "SELL",
   price: number,
   isOverdrive: boolean,
   confidence: number,
-  reasoning: string
+  reasoning: string,
 ) {
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
@@ -300,7 +310,7 @@ async function executeTrade(
     let totalValue = 0;
     let pnl = 0;
 
-    if (type === 'BUY') {
+    if (type === "BUY") {
       const spendAmount = wallet.balanceUsdt * 0.1;
       amount = spendAmount / price;
       totalValue = spendAmount;
@@ -315,7 +325,7 @@ async function executeTrade(
           assets: newAssets,
         },
       });
-    } else if (type === 'SELL') {
+    } else if (type === "SELL") {
       const holdings = assets[symbol] || 0;
       if (holdings === 0) return null;
 
@@ -345,8 +355,8 @@ async function executeTrade(
         amount,
         price,
         totalValue,
-        pnl: type === 'SELL' ? pnl : null,
-        exchange: 'Uphold',
+        pnl: type === "SELL" ? pnl : null,
+        exchange: "Uphold",
         isOverdrive,
         confidence,
         reasoning,
@@ -363,18 +373,18 @@ async function executeTrade(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const userId = searchParams.get("userId");
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
+        { error: "userId is required" },
+        { status: 400 },
       );
     }
 
     const recentTransactions = await prisma.transaction.findMany({
       where: { userId },
-      orderBy: { timestamp: 'desc' },
+      orderBy: { timestamp: "desc" },
       take: 20,
     });
 
@@ -387,10 +397,10 @@ export async function GET(request: NextRequest) {
       wallet,
     });
   } catch (error) {
-    console.error('Failed to fetch trade data:', error);
+    console.error("Failed to fetch trade data:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

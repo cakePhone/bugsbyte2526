@@ -6,8 +6,8 @@
  * then normalises them into a single spread object.
  */
 
-import { fetchUpholdPrice, type ExchangePrice } from './uphold';
-import { fetchBinancePrice } from './binance';
+import { fetchUpholdPrice, type ExchangePrice } from "./uphold";
+import { fetchBinancePrice } from "./binance";
 
 export interface AggregatedPrices {
   exchangeA: ExchangePrice;

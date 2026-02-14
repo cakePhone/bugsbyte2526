@@ -1,51 +1,117 @@
 /**
- * Home Page — The Interrogation (Onboarding)
+ * Home Page — The Interrogation (Onboarding) + Auth
  * Geisha Gains • Coffee Driven Development
  *
  * Profiles the user's trading psychology before entering the War Room.
- * Stores RiskProfile in localStorage, then redirects to /dashboard.
+ * Final onboarding step creates account. Login available for returning users.
  */
 
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import TheInterrogation from '@/components/onboarding/TheInterrogation';
-import type { RiskProfile } from '@/components/onboarding/TheInterrogation';
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import TheInterrogation from "@/components/onboarding/TheInterrogation";
+import type { RiskProfile } from "@/components/onboarding/TheInterrogation";
 
 export default function Home() {
   const router = useRouter();
-  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // Check if user already has a profile
+  // Check if user is already authenticated
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('geisha_risk_profile');
-      if (stored) {
-        setHasProfile(true);
-        // Use setTimeout to prevent hydration issues
-        setTimeout(() => router.push('/dashboard'), 100);
-      } else {
-        setHasProfile(false);
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const { user } = await res.json();
+          if (user) {
+            router.push("/dashboard");
+            return;
+          }
+        }
+      } catch {
+        // not logged in
       }
-    } catch {
-      setHasProfile(false);
-    }
-  }, []); // Empty deps - run only once on mount
+      setChecking(false);
+    })();
+  }, [router]);
 
+  // Handle onboarding completion → register
   const handleComplete = useCallback(
-    (profile: RiskProfile) => {
-      // Store in localStorage
-      localStorage.setItem('geisha_risk_profile', JSON.stringify(profile));
+    async (profile: RiskProfile, auth: { email: string; password: string }) => {
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: auth.email,
+            password: auth.password,
+            riskProfile: profile,
+          }),
+        });
 
-      // Navigate to War Room
-      setTimeout(() => router.push('/dashboard'), 100);
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.error || "Registration failed.");
+          return;
+        }
+
+        // Store profile locally too for quick access
+        localStorage.setItem("geisha_risk_profile", JSON.stringify(profile));
+
+        // Redirect to War Room
+        router.push("/dashboard");
+      } catch {
+        alert("Network error. Try again.");
+      }
     },
-    [router]
+    [router],
   );
 
+  // Handle login
+  const handleLogin = useCallback(async () => {
+    setLoginError("");
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLoginError(data.error || "Login failed.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Store risk profile locally if available
+      if (data.user?.riskProfile) {
+        localStorage.setItem(
+          "geisha_risk_profile",
+          JSON.stringify(data.user.riskProfile),
+        );
+      }
+
+      // Redirect to War Room
+      router.push("/dashboard");
+    } catch {
+      setLoginError("Network error.");
+      setSubmitting(false);
+    }
+  }, [loginEmail, loginPassword, router]);
+
   // Loading state
-  if (hasProfile === null) {
+  if (checking) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="text-gray-600 font-mono text-sm animate-pulse">
@@ -55,17 +121,96 @@ export default function Home() {
     );
   }
 
-  // Already has profile — redirecting
-  if (hasProfile) {
-    return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-        <div className="text-gray-600 font-mono text-sm">
-          PROFILE DETECTED. ENTERING WAR ROOM...
-        </div>
-      </div>
-    );
-  }
+  return (
+    <>
+      <TheInterrogation
+        onComplete={handleComplete}
+        onLoginClick={() => setShowLogin(true)}
+      />
 
-  // Show The Interrogation
-  return <TheInterrogation onComplete={handleComplete} />;
+      {/* ── LOGIN MODAL ── */}
+      <AnimatePresence>
+        {showLogin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            onClick={() => setShowLogin(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md border-4 border-white bg-black text-white font-mono"
+            >
+              {/* Modal Header */}
+              <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold tracking-widest">
+                  OPERATOR LOGIN
+                </span>
+                <button
+                  onClick={() => setShowLogin(false)}
+                  className="text-gray-500 hover:text-white text-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                <div className="text-[#FF0000] text-sm mb-4">
+                  {"> AUTHENTICATE TO ACCESS WAR ROOM."}
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="operator@geisha.gains"
+                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-700"
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+
+                {loginError && (
+                  <div className="text-[#FF0000] text-xs font-bold">
+                    {"> ERROR: "}
+                    {loginError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleLogin}
+                  disabled={submitting}
+                  className="w-full border-4 border-white bg-black text-white px-6 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "AUTHENTICATING..." : "> SIGN IN"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 }

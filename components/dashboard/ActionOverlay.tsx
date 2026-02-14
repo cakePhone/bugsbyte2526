@@ -8,10 +8,10 @@
  * - Red vertical line on chart with "FATAL EVENT DETECTED" label
  */
 
-'use client';
+"use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import type { NewsAnalysis } from '@/app/api/news/analyze/route';
+import { motion, AnimatePresence } from "framer-motion";
+import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 
 interface ActionOverlayProps {
   analyses: NewsAnalysis[];
@@ -38,7 +38,10 @@ export default function ActionOverlay({
   const lethalAlerts: LethalAlert[] = [];
 
   analyses.forEach((a) => {
-    if (a.portfolio_threat > 8 && (a.sentiment === 'BEARISH' || a.sentiment === 'LETHAL')) {
+    if (
+      a.portfolio_threat > 8 &&
+      (a.sentiment === "BEARISH" || a.sentiment === "LETHAL")
+    ) {
       a.affected_assets.forEach((sym) => {
         const amount = holdings[sym] || 0;
         if (amount > 0 && !dismissedIds.has(`${a.id}-${sym}`)) {
@@ -61,7 +64,7 @@ export default function ActionOverlay({
               opacity: 1,
               y: 0,
               scale: 1,
-              borderColor: ['#FF0000', '#CC0000', '#FF0000'],
+              borderColor: ["#FF0000", "#CC0000", "#FF0000"],
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{
@@ -80,7 +83,9 @@ export default function ActionOverlay({
                 </span>
               </div>
               <button
-                onClick={() => onDismiss(`${alert.analysis.id}-${alert.affectedHolding}`)}
+                onClick={() =>
+                  onDismiss(`${alert.analysis.id}-${alert.affectedHolding}`)
+                }
                 className="text-gray-500 hover:text-white text-xs"
               >
                 ✕

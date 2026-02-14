@@ -14,7 +14,7 @@ export interface ExchangePrice {
   timestamp: number;
 }
 
-const UPHOLD_API_BASE = 'https://api.uphold.com/v0';
+const UPHOLD_API_BASE = "https://api.uphold.com/v0";
 
 /**
  * Fetch the BTC-USD ticker from Uphold and return a normalised ExchangePrice.
@@ -23,9 +23,9 @@ const UPHOLD_API_BASE = 'https://api.uphold.com/v0';
  */
 export async function fetchUpholdPrice(): Promise<ExchangePrice> {
   const res = await fetch(`${UPHOLD_API_BASE}/ticker/BTC-USD`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   if (!res.ok) {
@@ -38,8 +38,8 @@ export async function fetchUpholdPrice(): Promise<ExchangePrice> {
   const bid = parseFloat(data.bid);
 
   return {
-    exchange: 'Uphold',
-    pair: 'BTC/USDT',
+    exchange: "Uphold",
+    pair: "BTC/USDT",
     ask,
     bid,
     mid: (ask + bid) / 2,

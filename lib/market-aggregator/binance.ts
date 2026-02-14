@@ -8,7 +8,7 @@
  * feed plus a small random spread.
  */
 
-import type { ExchangePrice } from './uphold';
+import type { ExchangePrice } from "./uphold";
 
 /**
  * Generate a mock Binance BTC/USDT price.
@@ -31,8 +31,8 @@ export async function fetchBinancePrice(
   const bid = base + drift - base * 0.0003; // bid slightly below mid
 
   return {
-    exchange: 'Binance',
-    pair: 'BTC/USDT',
+    exchange: "Binance",
+    pair: "BTC/USDT",
     ask: parseFloat(ask.toFixed(2)),
     bid: parseFloat(bid.toFixed(2)),
     mid: parseFloat(((ask + bid) / 2).toFixed(2)),

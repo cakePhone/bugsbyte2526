@@ -10,6 +10,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import TheBulletin from "@/components/dashboard/TheBulletin";
 import ThreatRadar from "@/components/dashboard/ThreatRadar";
@@ -40,8 +41,10 @@ function generateMockPrice(symbol: string): number {
 
 // ── Dashboard ─────────────────────────────────────────────
 export default function WarRoom() {
+  const router = useRouter();
   // Profile from localStorage (set by The Interrogation)
   const [profile, setProfile] = useState<RiskProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [analyses, setAnalyses] = useState<NewsAnalysis[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<NewsAnalysis | null>(
     null,
@@ -50,11 +53,8 @@ export default function WarRoom() {
   const [scanCount, setScanCount] = useState(0);
 
   // Wallet state
-  const [walletBalance, setWalletBalance] = useState(10000);
-  const [holdings, setHoldings] = useState<Record<string, number>>({
-    BTC: 0.1,
-    ETH: 2.0,
-  });
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [holdings, setHoldings] = useState<Record<string, number>>({});
   const [trades, setTrades] = useState<
     Array<{
       symbol: string;
@@ -79,6 +79,61 @@ export default function WarRoom() {
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const priceRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Auth check ──────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          router.push("/");
+          return;
+        }
+        const { user } = await res.json();
+        if (!user) {
+          router.push("/");
+          return;
+        }
+
+        // Load real wallet + trade data
+        try {
+          const dataRes = await fetch("/api/user/data");
+          if (dataRes.ok) {
+            const { wallet, transactions } = await dataRes.json();
+            setWalletBalance(wallet.balanceUsdt);
+            const assets =
+              typeof wallet.assets === "object" && wallet.assets !== null
+                ? (wallet.assets as Record<string, number>)
+                : {};
+            setHoldings(assets);
+            setTrades(
+              transactions.map(
+                (t: {
+                  symbol: string;
+                  side: "BUY" | "SELL";
+                  amount: number;
+                  price: number;
+                  ts: number;
+                }) => ({
+                  symbol: t.symbol,
+                  side: t.side,
+                  amount: t.amount,
+                  price: t.price,
+                  ts: t.ts,
+                }),
+              ),
+            );
+          }
+        } catch {
+          // non-fatal — keep defaults
+        }
+
+        setAuthChecked(true);
+      } catch {
+        router.push("/");
+      }
+    })();
+  }, [router]);
 
   // ── Load profile from localStorage ──────────────────────
   useEffect(() => {
@@ -233,7 +288,7 @@ export default function WarRoom() {
   // Active chart symbol (the one most under threat, or BTC default)
   const [activeChartSymbol, setActiveChartSymbol] = useState("BTC");
 
-  if (!profile) {
+  if (!authChecked || !profile) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="text-gray-500 font-mono text-sm">
@@ -304,6 +359,20 @@ export default function WarRoom() {
                 {profile.geopolitical_sensitivity}
               </span>
             </div>
+
+            {/* Settings */}
+            <button
+              onClick={() => router.push("/settings")}
+              className="border-2 border-gray-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-white hover:text-white transition-colors"
+            >
+              ⚙ BASE
+            </button>
+            <button
+              onClick={() => router.push("/fund")}
+              className="border-2 border-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors"
+            >
+              $ FUND ARMY
+            </button>
           </div>
         </div>
       </header>
@@ -374,8 +443,14 @@ export default function WarRoom() {
                 />
                 <FatalEventLine
                   events={fatalEvents}
-                  timeStart={(priceHistories[activeChartSymbol] || [])[0]?.timestamp ?? Date.now()}
-                  timeEnd={(priceHistories[activeChartSymbol] || []).at(-1)?.timestamp ?? Date.now()}
+                  timeStart={
+                    (priceHistories[activeChartSymbol] || [])[0]?.timestamp ??
+                    Date.now()
+                  }
+                  timeEnd={
+                    (priceHistories[activeChartSymbol] || []).at(-1)
+                      ?.timestamp ?? Date.now()
+                  }
                 />
               </div>
             </div>

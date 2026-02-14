@@ -35,7 +35,7 @@ export interface NetProfitResult {
 }
 
 const DEFAULT_FEE_PER_LEG = 0.001; // 0.1 %
-const DEFAULT_SLIPPAGE = 0.0005;   // 0.05 %
+const DEFAULT_SLIPPAGE = 0.0005; // 0.05 %
 
 /**
  * Calculate the net profit of a buy-on-A / sell-on-B arbitrage
@@ -54,8 +54,8 @@ export function calculateNetProfit(input: NetProfitInput): NetProfitResult {
   const rawSpreadPct = cheapPrice > 0 ? (rawSpread / cheapPrice) * 100 : 0;
 
   // Two legs: buy on the cheaper exchange, sell on the more expensive one.
-  const feeCost = cheapPrice * feePerLeg * 2;           // 0.1 % × 2 = 0.2 %
-  const slippageCost = cheapPrice * slippage;            // configurable buffer
+  const feeCost = cheapPrice * feePerLeg * 2; // 0.1 % × 2 = 0.2 %
+  const slippageCost = cheapPrice * slippage; // configurable buffer
   const totalCost = feeCost + slippageCost;
   const totalCostPct = cheapPrice > 0 ? (totalCost / cheapPrice) * 100 : 0;
 

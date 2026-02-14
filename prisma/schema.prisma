@@ -12,13 +12,14 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  preferences Json?    // JSONB for theme, notifications, risk tolerance
-  riskProfile Json?    // JSONB: { risk_tolerance, investment_horizon, focus_sectors, geopolitical_sensitivity }
-  onboarded   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   // bcrypt hash
+  preferences  Json?    // JSONB for theme, notifications, risk tolerance
+  riskProfile  Json?    // JSONB: { risk_tolerance, investment_horizon, focus_sectors, geopolitical_sensitivity }
+  onboarded    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
   wallet      Wallet?
   transactions Transaction[]
