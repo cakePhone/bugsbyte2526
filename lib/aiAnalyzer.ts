@@ -62,7 +62,7 @@ async function fetchUphold(symbol: string): Promise<ExchangeQuote> {
     const bid = Math.max(0, mid - spread);
 
     return {
-      exchange: "PRIMARY",
+      exchange: "UPHOLD",
       symbol,
       ask,
       bid,
@@ -71,17 +71,17 @@ async function fetchUphold(symbol: string): Promise<ExchangeQuote> {
       timestamp: Date.now(),
     };
   } catch {
-    return mockQuote("PRIMARY", symbol);
+    return mockQuote("UPHOLD", symbol);
   }
 }
 
-/** Mock exchange #2 — "BrewSwap" */
-function fetchBrewSwap(symbol: string, upholdAsk: number): ExchangeQuote {
+/** Mock exchange #2 — "Binance" */
+function fetchBinance(symbol: string, upholdAsk: number): ExchangeQuote {
   const drift = (Math.random() - 0.4) * 0.008; // slight bias higher
   const ask = upholdAsk * (1 + drift);
   const bid = ask * (1 - 0.001 - Math.random() * 0.003);
   return {
-    exchange: "BREWSWAP",
+    exchange: "BINANCE",
     symbol,
     ask: +ask.toFixed(2),
     bid: +bid.toFixed(2),
@@ -91,13 +91,13 @@ function fetchBrewSwap(symbol: string, upholdAsk: number): ExchangeQuote {
   };
 }
 
-/** Mock exchange #3 — "RoastFi" */
-function fetchRoastFi(symbol: string, upholdAsk: number): ExchangeQuote {
+/** Mock exchange #3 — "Kraken" */
+function fetchKraken(symbol: string, upholdAsk: number): ExchangeQuote {
   const drift = (Math.random() - 0.6) * 0.006; // slight bias lower
   const ask = upholdAsk * (1 + drift);
   const bid = ask * (1 - 0.0015 - Math.random() * 0.002);
   return {
-    exchange: "ROASTFI",
+    exchange: "KRAKEN",
     symbol,
     ask: +ask.toFixed(2),
     bid: +bid.toFixed(2),
@@ -261,9 +261,9 @@ export async function runArbitrageAnalysis(): Promise<AnalyzerSnapshot> {
   for (const symbol of symbols) {
     // 1) Poll all 3 exchanges
     const uphold = await fetchUphold(symbol);
-    const brew = fetchBrewSwap(symbol, uphold.ask);
-    const roast = fetchRoastFi(symbol, uphold.ask);
-    const allQuotes = [uphold, brew, roast];
+    const binance = fetchBinance(symbol, uphold.ask);
+    const kraken = fetchKraken(symbol, uphold.ask);
+    const allQuotes = [uphold, binance, kraken];
 
     // 2) Find green bean (lowest ask) and worst
     const sorted = [...allQuotes].sort((a, b) => a.ask - b.ask);

@@ -142,7 +142,7 @@ export default function ArbitrageBulletin({
                       DETECTED HISTORY
                     </span>
                   </div>
-                  {opportunityHistory.map((entry) => (
+                  {opportunityHistory.slice(0, 5).map((entry) => (
                     <HistoryRow key={entry.id} entry={entry} />
                   ))}
                 </div>

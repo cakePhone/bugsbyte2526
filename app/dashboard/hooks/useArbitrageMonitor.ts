@@ -98,7 +98,7 @@ export default function useArbitrageMonitor(enabled = true) {
           const unique = Array.from(
             new Map(merged.map((entry) => [entry.id, entry])).values(),
           );
-          return unique.slice(0, 80);
+          return unique.slice(0, 5);
         });
       }
     } catch {

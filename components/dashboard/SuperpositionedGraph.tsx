@@ -389,7 +389,7 @@ export default function SuperpositionedGraph({
             crosshairMarkerRadius: 5,
             crosshairMarkerBorderColor: "#FFFFFF",
             crosshairMarkerBackgroundColor: layer.color,
-            priceScaleId: layer.isPrimary ? "right" : layer.symbol,
+            priceScaleId: "right",
           });
         } else {
           series = chart.addSeries(LineSeries, {
@@ -401,15 +401,7 @@ export default function SuperpositionedGraph({
             crosshairMarkerRadius: 5,
             crosshairMarkerBorderColor: "#FFFFFF",
             crosshairMarkerBackgroundColor: layer.color,
-            priceScaleId: layer.isPrimary ? "right" : layer.symbol,
-          });
-        }
-
-        // Configure non-primary price scales to overlay (dont show separate axis)
-        if (!layer.isPrimary) {
-          chart.priceScale(layer.symbol).applyOptions({
-            visible: false,
-            scaleMargins: { top: 0.1, bottom: 0.1 },
+            priceScaleId: "right",
           });
         }
 
@@ -442,6 +434,13 @@ export default function SuperpositionedGraph({
         priceLinesRef.current.set(layer.symbol, priceLine);
       }
     }
+
+    // Switch to percentage mode when multiple layers are superpositioned
+    // so all lines are normalized to % change and properly overlay
+    const isMultiLayer = activeLayers.length > 1;
+    chart.priceScale("right").applyOptions({
+      mode: isMultiLayer ? 2 : 0, // 2 = Percentage, 0 = Normal
+    });
 
     // Fit content to show all data
     chart.timeScale().fitContent();
