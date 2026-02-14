@@ -1,0 +1,430 @@
+"use client";
+
+import { useCallback, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useWarRoom, type GraphLayer, type TimeWindow, type TacticalPortal } from "@/contexts/WarRoomContext";
+import type { PricePoint } from "./types";
+
+/**
+ * SUPERPOSITIONED GRAPH VIEWER — Main Content Engine
+ * 
+ * Military radar aesthetic. Multiple data transparencies stacked.
+ * Z-Index layering for overlaid market data streams.
+ */
+
+interface SuperpositionedGraphProps {
+  priceHistories: Record<string, PricePoint[]>;
+  currentPrices: Record<string, number>;
+  availableAssets: string[];
+  aiPredictions?: Record<string, { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }>;
+}
+
+const TIME_WINDOWS: { key: TimeWindow; label: string }[] = [
+  { key: "1H", label: "1H" },
+  { key: "1D", label: "1D" },
+  { key: "1W", label: "1W" },
+  { key: "1M", label: "1M" },
+];
+
+export default function SuperpositionedGraph({
+  priceHistories,
+  currentPrices,
+  availableAssets,
+  aiPredictions = {},
+}: SuperpositionedGraphProps) {
+  const { 
+    state, 
+    addLayer, 
+    removeLayer, 
+    setTimeWindow, 
+    toggleOverlayMenu, 
+    closeOverlayMenu,
+    setPortal,
+  } = useWarRoom();
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number } | null>(null);
+
+  // SVG dimensions
+  const width = 900;
+  const height = 400;
+  const padding = 40;
+
+  // Filter layers that have price data
+  const activeLayers = state.layers.filter(
+    (layer) => layer.visible && priceHistories[layer.symbol]?.length >= 2
+  );
+
+  // Calculate normalized data for all layers
+  const normalizedData = activeLayers.map((layer) => {
+    const points = priceHistories[layer.symbol] || [];
+    const cleaned = points
+      .map((p) => ({ timestamp: Number(p.timestamp), price: Number(p.price) }))
+      .filter((p) => Number.isFinite(p.timestamp) && Number.isFinite(p.price) && p.price > 0)
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (cleaned.length < 2) return { layer, points: [], normalized: [] };
+
+    const baseline = cleaned[0].price;
+    const normalized = cleaned.map((p) => ({
+      timestamp: p.timestamp,
+      value: ((p.price - baseline) / baseline) * 100,
+      price: p.price,
+    }));
+
+    return { layer, points: cleaned, normalized };
+  }).filter((d) => d.normalized.length >= 2);
+
+  // Calculate global bounds
+  const allNormalized = normalizedData.flatMap((d) => d.normalized.map((n) => n.value));
+  const minPct = allNormalized.length > 0 ? Math.min(...allNormalized, -0.1) : -5;
+  const maxPct = allNormalized.length > 0 ? Math.max(...allNormalized, 0.1) : 5;
+  const range = maxPct - minPct || 1;
+
+  const allTimestamps = normalizedData.flatMap((d) => d.points.map((p) => p.timestamp));
+  const startTs = allTimestamps.length > 0 ? Math.min(...allTimestamps) : Date.now() - 86400000;
+  const endTs = allTimestamps.length > 0 ? Math.max(...allTimestamps) : Date.now();
+  const tsRange = endTs - startTs || 1;
+
+  // Handle hover for tactical portal
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current || normalizedData.length === 0) return;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Convert to data coordinates
+    const dataX = startTs + ((x - padding) / (width - 2 * padding)) * tsRange;
+    
+    // Find closest point from primary layer
+    const primaryData = normalizedData.find((d) => d.layer.isPrimary) || normalizedData[0];
+    if (!primaryData) return;
+
+    const closest = primaryData.points.reduce((prev, curr) => {
+      return Math.abs(curr.timestamp - dataX) < Math.abs(prev.timestamp - dataX) ? curr : prev;
+    });
+
+    const prediction = aiPredictions[primaryData.layer.symbol] || { trend: "NEUTRAL", confidence: 50 };
+
+    setHoveredPoint({ x: e.clientX, y: e.clientY });
+    setPortal({
+      x: e.clientX,
+      y: e.clientY,
+      symbol: primaryData.layer.symbol,
+      currentPrice: closest.price,
+      aiPrediction: prediction.trend,
+      trendConfidence: prediction.confidence,
+    });
+  }, [normalizedData, startTs, tsRange, aiPredictions, setPortal]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredPoint(null);
+    setPortal(null);
+  }, [setPortal]);
+
+  // Generate SVG paths for each layer
+  const generatePath = (normalized: { timestamp: number; value: number }[]) => {
+    return normalized.map((p) => {
+      const x = padding + ((p.timestamp - startTs) / tsRange) * (width - 2 * padding);
+      const y = padding + (1 - (p.value - minPct) / range) * (height - 2 * padding);
+      return `${x},${y}`;
+    }).join(" ");
+  };
+
+  return (
+    <div className="border-4 border-white bg-black flex flex-col">
+      {/* Top Bar - Asset Context */}
+      <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* Add Layer Button */}
+          <button
+            onClick={toggleOverlayMenu}
+            className="border-4 border-white bg-black text-white px-3 py-1 text-sm font-black font-mono hover:bg-[#FF0000] hover:border-[#FF0000] transition-colors"
+          >
+            +
+          </button>
+
+          {/* Layer Tabs */}
+          <div className="flex items-center gap-1">
+            {state.layers.map((layer) => (
+              <div
+                key={layer.id}
+                className={`flex items-center gap-1 border-2 px-2 py-1 ${
+                  layer.isPrimary 
+                    ? "border-white bg-white text-black" 
+                    : "border-gray-600 text-gray-400 hover:border-white hover:text-white"
+                } transition-colors`}
+              >
+                <div 
+                  className="w-3 h-3 border"
+                  style={{ 
+                    backgroundColor: layer.visible ? layer.color : "transparent",
+                    borderColor: layer.color,
+                  }}
+                />
+                <span className="text-[10px] font-black font-mono uppercase">
+                  {layer.symbol}
+                </span>
+                {!layer.isPrimary && (
+                  <button
+                    onClick={() => removeLayer(layer.id)}
+                    className="text-gray-500 hover:text-[#FF0000] text-xs font-bold ml-1"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-[10px] font-black font-mono text-gray-500 uppercase">
+          {activeLayers.length} LAYERS ACTIVE
+        </div>
+      </div>
+
+      {/* Overlay Menu */}
+      <AnimatePresence>
+        {state.overlayMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b-4 border-white bg-black overflow-hidden"
+          >
+            <div className="px-4 py-3">
+              <div className="text-[10px] font-black font-mono text-gray-500 uppercase tracking-widest mb-2">
+                SELECT ASSET TO SUPERIMPOSE
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableAssets
+                  .filter((asset) => !state.layers.some((l) => l.symbol === asset))
+                  .map((asset) => (
+                    <button
+                      key={asset}
+                      onClick={() => {
+                        addLayer(asset);
+                        closeOverlayMenu();
+                      }}
+                      className="border-2 border-gray-600 px-3 py-1 text-xs font-black font-mono text-gray-400 hover:border-white hover:text-white hover:bg-[#FF0000] transition-colors uppercase"
+                    >
+                      {asset}
+                    </button>
+                  ))}
+              </div>
+              {availableAssets.filter((a) => !state.layers.some((l) => l.symbol === a)).length === 0 && (
+                <div className="text-xs font-mono text-gray-600">ALL ASSETS ALREADY ON RADAR</div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Second Row - Stacked Layer Tabs (if many layers) */}
+      {state.layers.length > 4 && (
+        <div className="border-b-4 border-white px-4 py-2 flex flex-wrap gap-1">
+          {state.layers.slice(4).map((layer) => (
+            <div
+              key={`tab-${layer.id}`}
+              className="flex items-center gap-1 border border-gray-700 px-2 py-0.5"
+            >
+              <div 
+                className="w-2 h-2"
+                style={{ backgroundColor: layer.color }}
+              />
+              <span className="text-[8px] font-mono text-gray-400 uppercase">
+                {layer.symbol}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* The Chart (SVG Engine) */}
+      <div className="relative flex-1 min-h-[400px] p-4">
+        {normalizedData.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center text-gray-600 font-mono text-sm uppercase">
+            NO DATA STREAMS AVAILABLE...
+          </div>
+        ) : (
+          <svg
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="xMidYMid meet"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            className="cursor-crosshair"
+          >
+            {/* Grid Lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+              const y = padding + pct * (height - 2 * padding);
+              return (
+                <g key={`grid-${pct}`}>
+                  <line
+                    x1={padding}
+                    y1={y}
+                    x2={width - padding}
+                    y2={y}
+                    stroke="#222"
+                    strokeWidth={1}
+                    strokeDasharray={pct === 0.5 ? "none" : "4,4"}
+                  />
+                </g>
+              );
+            })}
+
+            {/* Zero Line */}
+            {minPct < 0 && maxPct > 0 && (
+              <line
+                x1={padding}
+                y1={padding + (1 - (0 - minPct) / range) * (height - 2 * padding)}
+                x2={width - padding}
+                y2={padding + (1 - (0 - minPct) / range) * (height - 2 * padding)}
+                stroke="#444"
+                strokeWidth={1}
+              />
+            )}
+
+            {/* Render layers in z-index order (lowest first) */}
+            {normalizedData
+              .sort((a, b) => a.layer.zIndex - b.layer.zIndex)
+              .map(({ layer, normalized, points }) => {
+                const path = generatePath(normalized);
+                const latest = points.at(-1)?.price ?? currentPrices[layer.symbol] ?? 0;
+                const first = points[0]?.price ?? latest;
+                const deltaPct = first > 0 ? ((latest - first) / first) * 100 : 0;
+                const latestNorm = normalized.at(-1);
+                const labelY = latestNorm 
+                  ? padding + (1 - (latestNorm.value - minPct) / range) * (height - 2 * padding)
+                  : height / 2;
+
+                return (
+                  <g key={layer.id} style={{ zIndex: layer.zIndex }}>
+                    {/* Main Line */}
+                    <polyline
+                      points={path}
+                      fill="none"
+                      stroke={layer.color}
+                      strokeWidth={layer.lineWidth}
+                      strokeDasharray={layer.lineStyle === "dashed" ? "8,4" : "none"}
+                      opacity={layer.visible ? 1 : 0.3}
+                    />
+
+                    {/* End Label */}
+                    <text
+                      x={width - padding + 5}
+                      y={labelY}
+                      className="text-[10px] font-black font-mono"
+                      fill={layer.color}
+                    >
+                      {layer.symbol} {deltaPct >= 0 ? "+" : ""}{deltaPct.toFixed(2)}%
+                    </text>
+
+                    {/* Latest Price Marker */}
+                    {layer.isPrimary && latestNorm && (
+                      <circle
+                        cx={width - padding}
+                        cy={labelY}
+                        r={4}
+                        fill={layer.color}
+                        stroke="#000"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </g>
+                );
+              })}
+
+            {/* Y-Axis Labels */}
+            <text x={5} y={padding + 4} className="text-[9px] font-mono" fill="#555">
+              +{maxPct.toFixed(1)}%
+            </text>
+            <text x={5} y={height - padding + 4} className="text-[9px] font-mono" fill="#555">
+              {minPct.toFixed(1)}%
+            </text>
+
+            {/* Hover Line */}
+            {hoveredPoint && (
+              <line
+                x1={hoveredPoint.x}
+                y1={padding}
+                x2={hoveredPoint.x}
+                y2={height - padding}
+                stroke="#FF0000"
+                strokeWidth={1}
+                strokeDasharray="4,4"
+              />
+            )}
+          </svg>
+        )}
+
+        {/* Time Window Controls - Bottom Right */}
+        <div className="absolute bottom-6 right-6 flex items-center gap-1">
+          {TIME_WINDOWS.map((tw) => (
+            <button
+              key={tw.key}
+              onClick={() => setTimeWindow(tw.key)}
+              className={`border-4 px-3 py-1 text-xs font-black font-mono uppercase tracking-widest transition-colors ${
+                state.timeWindow === tw.key
+                  ? "border-white bg-white text-black"
+                  : "border-gray-700 text-gray-500 hover:border-white hover:text-white"
+              }`}
+            >
+              {tw.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tactical Portal (Hover Info) */}
+      <AnimatePresence>
+        {state.portal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.1 }}
+            className="fixed z-50 pointer-events-none"
+            style={{ 
+              left: state.portal.x + 15, 
+              top: state.portal.y - 15,
+            }}
+          >
+            <div className="border-4 border-white bg-black p-3 font-mono min-w-[180px]">
+              <div className="text-xs font-black text-white uppercase tracking-widest border-b-2 border-white pb-1 mb-2">
+                {state.portal.symbol}
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-gray-500">CURRENT_PRICE</span>
+                  <span className="text-[#D4AF37] font-black">
+                    ${state.portal.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-gray-500">AI_TREND_PREDICTION</span>
+                  <span className={`font-black ${
+                    state.portal.aiPrediction === "BULLISH" ? "text-green-400" :
+                    state.portal.aiPrediction === "BEARISH" ? "text-[#FF0000]" :
+                    "text-gray-400"
+                  }`}>
+                    {state.portal.aiPrediction}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-gray-500">CONFIDENCE</span>
+                  <span className="text-white font-black">
+                    {state.portal.trendConfidence}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

@@ -1,36 +1,38 @@
 /**
  * THE WAR ROOM — Main Trading Dashboard
+ * 
+ * Geisha Gains • BugsByte 2026
+ * High-density, high-utility trading interface.
+ * Minimalist Brutalist Design System.
  */
 
 "use client";
 
-import { useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import ClientBackground from "@/app/components/ClientBackground";
-import TheBulletin from "@/components/dashboard/TheBulletin";
-import ThreatRadar from "@/components/dashboard/ThreatRadar";
-import { FatalEventLine } from "@/components/dashboard/ActionOverlay";
-import DashboardStatCard from "@/components/dashboard/DashboardStatCard";
-import PriceChartSVG from "@/components/dashboard/PriceChartSVG";
-import ArticleDetailPanel from "@/components/dashboard/ArticleDetailPanel";
-import HoldingsPanel from "@/components/dashboard/HoldingsPanel";
-import HoldingsTradeModal from "@/components/dashboard/HoldingsTradeModal";
-import ExchangeSpreadTable from "@/components/ExchangeSpreadTable";
-import { TradeLog } from "@/components/TradeLog";
-import { formatMoney } from "@/components/dashboard/formatting";
-import type { NewsAnalysis } from "@/app/api/news/analyze/route";
+import WarRoomLayout from "@/components/dashboard/WarRoomLayout";
+import TacticalHoldings from "@/components/dashboard/TacticalHoldings";
+import SuperpositionedGraph from "@/components/dashboard/SuperpositionedGraph";
+import IntelligenceExchangeBar, { generateMockExchangeQuotes } from "@/components/dashboard/IntelligenceExchangeBar";
+import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
+import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
 import useChartHistory from "./hooks/useChartHistory";
 import useNewsAnalysis from "./hooks/useNewsAnalysis";
-import useHoldingsTrade from "./hooks/useHoldingsTrade";
 import useArbitrageMonitor from "./hooks/useArbitrageMonitor";
 
-export default function WarRoom() {
+/** Map WarRoom TimeWindow → useChartHistory ChartTimeframe */
+const TIME_WINDOW_MAP: Record<TimeWindow, ChartTimeframe> = {
+  "1H": "1H",
+  "1D": "24H",
+  "1W": "7D",
+  "1M": "30D",
+};
+
+// Inner component that uses the WarRoom context
+function WarRoomContent() {
   const router = useRouter();
-  const [selectedArticle, setSelectedArticle] = useState<NewsAnalysis | null>(
-    null,
-  );
+  const { state, updateSystemStatus, initLayers } = useWarRoom();
 
   const {
     profile,
@@ -40,413 +42,205 @@ export default function WarRoom() {
     holdingValuesUsdt,
     holdingValuesDisplay,
     availableCoins,
-    selectedChartSymbols,
     prices,
-    loadUserData,
-    toggleChartSymbol,
   } = useDashboardData(router);
 
   const {
     analyses,
     isLoading,
     scanCount,
-    newsPage,
-    newsTotalPages,
-    fatalEvents,
-    setNewsPage,
   } = useNewsAnalysis({
     profile,
     holdings,
   });
 
+  // Get symbols from WarRoom state layers
+  const selectedSymbols = state.layers.map((l) => l.symbol);
+
+  // Initialize layers from first holding on first load (no BTC hardcoding)
+  const holdingSymbols = useMemo(() => 
+    Object.entries(holdings).filter(([, amt]) => amt > 0).map(([sym]) => sym),
+    [holdings]
+  );
+
+  useEffect(() => {
+    if (holdingSymbols.length > 0 && state.layers.length === 0) {
+      initLayers(holdingSymbols);
+    }
+  }, [holdingSymbols, state.layers.length, initLayers]);
+
+  // Map TimeWindow to ChartTimeframe
+  const chartTimeframe = TIME_WINDOW_MAP[state.timeWindow];
+
   const {
-    chartTimeframes,
     priceHistories,
-    activeTimeframe,
     chartLoading,
     setActiveTimeframe,
   } = useChartHistory({
     authChecked,
-    selectedChartSymbols,
+    selectedChartSymbols: selectedSymbols,
     displayCurrency,
   });
 
-  const {
-    pendingHoldingsTrade,
-    holdingsTradeSubmitting,
-    holdingsTradeFeedback,
-    setPendingHoldingsTrade,
-    handleOpenHoldingsTrade,
-    handleSubmitHoldingsTrade,
-  } = useHoldingsTrade({
-    displayCurrency,
-    prices,
-    loadUserData,
-  });
+  // Sync WarRoom timeWindow → useChartHistory activeTimeframe
+  useEffect(() => {
+    setActiveTimeframe(chartTimeframe);
+  }, [chartTimeframe, setActiveTimeframe]);
+
+  // Track which layers have API errors (no data after loading)
+  const [apiErrors, setApiErrors] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (chartLoading) return;
+    const errors: Record<string, boolean> = {};
+    selectedSymbols.forEach((sym) => {
+      const hasData = priceHistories[sym] && priceHistories[sym].length >= 2;
+      errors[sym] = !hasData;
+    });
+    setApiErrors(errors);
+  }, [chartLoading, priceHistories, selectedSymbols]);
 
   const {
     loading: arbitrageLoading,
     scanCount: arbitrageScanCount,
-    opportunities,
-    orders,
-    cumulativePnL,
-    opportunityHistory,
   } = useArbitrageMonitor(authChecked);
 
-  const totalHoldingsValue = Object.entries(holdings).reduce(
-    (acc, [symbol, amount]) => {
-      const serverValue =
-        displayCurrency === "USD"
-          ? holdingValuesUsdt[symbol]
-          : holdingValuesDisplay[symbol];
-      if (typeof serverValue === "number" && Number.isFinite(serverValue)) {
-        return acc + serverValue;
+  // Compute threatened symbols from news analysis
+  const threatenedSymbols = useMemo(() => {
+    const set = new Set<string>();
+    analyses.forEach((a) => {
+      if (a.threat_level >= 9 && a.sentiment === "LETHAL") {
+        a.affected_assets.forEach((sym) => {
+          if (holdings[sym] && holdings[sym] > 0) set.add(sym);
+        });
       }
-      const livePrice = Number(prices[symbol] || 0);
-      if (!Number.isFinite(livePrice) || livePrice <= 0) return acc;
-      return acc + amount * livePrice;
-    },
-    0,
+    });
+    return set;
+  }, [analyses, holdings]);
+
+  // Generate exchange quotes for the primary/solo asset (dynamic, no BTC fallback)
+  const primarySymbol = state.layers.find((l) => l.isPrimary)?.symbol || state.layers[0]?.symbol || "";
+  const primaryPrice = prices[primarySymbol] || 0;
+  const exchangeQuotes = useMemo(() => 
+    primarySymbol ? generateMockExchangeQuotes(primarySymbol, primaryPrice || 100) : [],
+    [primarySymbol, primaryPrice]
   );
 
-  const opportunityCount = opportunities.filter(
-    (opportunity) => opportunity.execution.shouldTrade,
-  ).length;
+  // Mock AI predictions
+  const aiPredictions = useMemo(() => {
+    const predictions: Record<string, { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }> = {};
+    availableCoins.forEach((coin) => {
+      const rand = Math.random();
+      predictions[coin] = {
+        trend: rand > 0.6 ? "BULLISH" : rand > 0.3 ? "NEUTRAL" : "BEARISH",
+        confidence: Math.floor(50 + Math.random() * 45),
+      };
+    });
+    return predictions;
+  }, [availableCoins]);
+
+  // Mock entry prices for holdings (simulates purchase prices)
+  const purchasePrices = useMemo(() => {
+    const entryPrices: Record<string, number> = {};
+    Object.keys(holdings).forEach((sym) => {
+      if (holdings[sym] > 0 && prices[sym]) {
+        // Mock entry price as +/- 15% from current price
+        const variance = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+        entryPrices[sym] = prices[sym] * variance;
+      }
+    });
+    return entryPrices;
+  }, [holdings, prices]);
+
+  // Update system status based on loading states
+  useEffect(() => {
+    updateSystemStatus({
+      nimLatency: 12 + Math.floor(Math.random() * 30),
+      upholdApiStatus: arbitrageLoading ? "DEGRADED" : "ACTIVE",
+    });
+  }, [arbitrageLoading, updateSystemStatus]);
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center relative">
-        <ClientBackground />
-        <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
-        <div className="text-gray-500 font-mono text-sm relative z-10">
-          LOADING PROFILE...
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-gray-500 font-mono text-sm uppercase tracking-widest animate-pulse">
+          INITIALIZING WAR ROOM...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white font-mono relative">
-      {/* Interactive PixelBlast Background */}
-      <ClientBackground />
-      
-      {/* Dark Overlay for 30% more darkness */}
-      <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
-      
-      <header className="border-b-4 border-white bg-black sticky top-0 z-40 relative">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-tighter text-white">
-              ☕ GEISHA GAINS
-            </h1>
-            <span className="text-[10px] font-bold border-2 border-white px-2 py-0.5 text-white hidden md:inline-block">
-              WAR ROOM
-            </span>
-          </div>
+    <>
+      {/* Left Sidebar - Tactical Holdings (25% width) */}
+      <div className="w-1/4 min-w-[280px] max-w-[400px] h-[calc(100vh-96px)]">
+        <TacticalHoldings
+          holdings={holdings}
+          prices={prices}
+          holdingValuesUsdt={holdingValuesUsdt}
+          holdingValuesDisplay={holdingValuesDisplay}
+          currency={displayCurrency}
+          threatenedSymbols={threatenedSymbols}
+          priceChanges24h={{}}
+        />
+      </div>
 
-          <div className="flex items-center gap-3">
-            <div className="border-2 border-white px-3 py-1 flex items-center gap-2">
-              <motion.div
-                className={`w-2 h-2 ${isLoading ? "bg-[#FF0000]" : "bg-green-400"}`}
-                animate={isLoading ? { scale: [1, 1.4, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 0.3 }}
-              />
-              <span className="text-[10px] font-bold text-gray-300">
-                {scanCount} SCANS
-              </span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-1">
-              <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                  profile.risk_tolerance === "AGGRESSIVE"
-                    ? "border-[#FF0000] text-[#FF0000]"
-                    : profile.risk_tolerance === "MODERATE"
-                      ? "border-[#D4AF37] text-[#D4AF37]"
-                      : "border-gray-500 text-gray-400"
-                }`}
-              >
-                {profile.risk_tolerance}
-              </span>
-              <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 border ${
-                  profile.geopolitical_sensitivity === "PARANOID"
-                    ? "border-[#FF0000] text-[#FF0000]"
-                    : "border-gray-600 text-gray-500"
-                }`}
-              >
-                {profile.geopolitical_sensitivity}
-              </span>
-            </div>
-
-            <button
-              onClick={() => router.push("/settings")}
-              className="border-2 border-gray-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-white hover:text-white transition-colors"
-            >
-              ⚙ BASE
-            </button>
-            <button
-              onClick={() => router.push("/fund")}
-              className="border-2 border-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors"
-            >
-              $ FUND ARMY
-            </button>
-            <button
-              onClick={() => router.push("/strategy")}
-              className="border-2 border-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
-            >
-              🧠 STRATEGY
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1600px] mx-auto p-4 space-y-4 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <DashboardStatCard
-            label="PORTFOLIO VALUE"
-            value={formatMoney(totalHoldingsValue, displayCurrency)}
-          />
-          <DashboardStatCard
-            label="BEST OPPORTUNITIES"
-            value={
-              opportunityCount > 0 ? `${opportunityCount} LIVE` : "SCANNING"
-            }
-            alert={opportunityCount > 0}
-          />
-          <DashboardStatCard
-            label="ARBITRAGE P&L"
-            value={`${cumulativePnL >= 0 ? "+" : ""}${formatMoney(cumulativePnL, "USD")}`}
-            alert={cumulativePnL > 0}
+      {/* Main Content Area (75% width) */}
+      <div className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto h-[calc(100vh-96px)]">
+        {/* Superpositioned Graph Viewer */}
+        <div className="flex-1 min-h-[500px]" id="graph-viewer">
+          <SuperpositionedGraph
+            priceHistories={priceHistories}
+            currentPrices={prices}
+            availableAssets={availableCoins}
+            aiPredictions={aiPredictions}
+            apiErrors={apiErrors}
+            purchasePrices={purchasePrices}
           />
         </div>
 
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 xl:col-span-8 space-y-4">
-            <div>
-              <ExchangeSpreadTable opportunities={opportunities} />
-              <div className="border-4 border-t-0 border-white bg-black px-4 py-2 flex items-center justify-between">
-                <span className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest">
-                  ARBITRAGE SCANS: {arbitrageScanCount}
-                </span>
-                <span
-                  className={`text-[10px] font-bold font-mono uppercase tracking-widest ${
-                    arbitrageLoading ? "text-red-500" : "text-gray-400"
-                  }`}
-                >
-                  {arbitrageLoading ? "SYNCING FEEDS..." : "LIVE"}
-                </span>
-              </div>
-            </div>
-
-            <TradeLog transactions={orders} />
-          </div>
-
-          <div className="col-span-12 xl:col-span-4">
-            <div className="border-4 border-white bg-black h-full max-h-[1000px] overflow-y-auto">
-              <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-widest">
-                  OPPORTUNITY HISTORY
-                </h3>
-                <span className="text-[10px] text-gray-500">
-                  {opportunityHistory.length} EVENTS
-                </span>
-              </div>
-
-              <div>
-                {opportunityHistory.length === 0 ? (
-                  <div className="p-6 text-xs text-gray-500">
-                    WAITING FOR NET-PROFITABLE SPREADS...
-                  </div>
-                ) : (
-                  opportunityHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border-b border-gray-800 px-4 py-3 text-xs"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-white">
-                          {item.symbol}
-                        </span>
-                        <span className="text-[#D4AF37] font-bold">
-                          {item.netSpreadPct >= 0 ? "+" : ""}
-                          {item.netSpreadPct.toFixed(4)}%
-                        </span>
-                      </div>
-                      <div className="text-gray-400 mt-1">
-                        BUY {item.buyExchange} → SELL {item.sellExchange}
-                      </div>
-                      <div className="text-gray-500 mt-1">
-                        est. {item.estimatedNetUsdPerUnit >= 0 ? "+" : ""}$
-                        {item.estimatedNetUsdPerUnit.toFixed(4)} / unit
-                      </div>
-                      <div className="text-gray-600 mt-1">
-                        {new Date(item.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Intelligence Exchange Bar */}
+        <div id="intelligence-exchange">
+          <IntelligenceExchangeBar
+            quotes={exchangeQuotes}
+            isLoading={chartLoading || arbitrageLoading}
+            apiFailed={Object.values(apiErrors).some(Boolean)}
+          />
         </div>
-
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 lg:col-span-8">
-            <div className="border-4 border-white bg-black">
-              <div className="border-b-4 border-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedChartSymbols.map((symbol) => (
-                    <span
-                      key={symbol}
-                      className="border-2 border-white px-2 py-1 text-[10px] font-bold"
-                    >
-                      {symbol} • {displayCurrency === "EUR" ? "€" : "$"}
-                      {(prices[symbol] || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  ))}
-                </div>
-
-                <details className="relative">
-                  <summary className="list-none cursor-pointer border-2 border-white px-3 py-1 text-[10px] font-bold tracking-widest hover:bg-white hover:text-black transition-colors">
-                    SELECT COINS
-                  </summary>
-                  <div className="absolute right-0 top-8 z-20 w-40 border-2 border-white bg-black p-2 space-y-2">
-                    {availableCoins.map((coin) => {
-                      const checked = selectedChartSymbols.includes(coin);
-                      return (
-                        <label
-                          key={coin}
-                          className="flex items-center gap-2 text-xs font-bold text-white"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleChartSymbol(coin)}
-                            className="accent-white"
-                          />
-                          <span>{coin}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </details>
-              </div>
-
-              <div className="relative h-[300px] p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  {chartTimeframes.map((timeframe) => (
-                    <button
-                      key={timeframe.key}
-                      onClick={() => setActiveTimeframe(timeframe.key)}
-                      className={`border-2 px-2 py-1 text-[10px] font-bold tracking-widest transition-colors ${
-                        activeTimeframe === timeframe.key
-                          ? "border-white bg-white text-black"
-                          : "border-gray-700 text-gray-400 hover:border-white hover:text-white"
-                      }`}
-                    >
-                      {timeframe.label}
-                    </button>
-                  ))}
-                </div>
-
-                {chartLoading && (
-                  <div className="absolute top-16 right-6 z-10 text-[10px] font-bold text-gray-500">
-                    LOADING HISTORY...
-                  </div>
-                )}
-
-                <PriceChartSVG
-                  histories={priceHistories}
-                  selectedSymbols={selectedChartSymbols}
-                  timeframe={activeTimeframe}
-                  currency={displayCurrency}
-                />
-                <FatalEventLine
-                  events={fatalEvents}
-                  timeStart={
-                    (priceHistories[selectedChartSymbols[0] || "BTC"] || [])[0]
-                      ?.timestamp ?? Date.now()
-                  }
-                  timeEnd={
-                    (priceHistories[selectedChartSymbols[0] || "BTC"] || []).at(
-                      -1,
-                    )?.timestamp ?? Date.now()
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="col-span-12 lg:col-span-4">
-            <ThreatRadar
-              analyses={analyses}
-              sensitivity={profile.geopolitical_sensitivity}
-              holdings={holdings}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 lg:col-span-5 max-h-[600px]">
-            <TheBulletin
-              analyses={analyses}
-              onSelectArticle={setSelectedArticle}
-              selectedId={selectedArticle?.id}
-              page={newsPage}
-              totalPages={newsTotalPages}
-              onPrevPage={() => setNewsPage((page) => Math.max(1, page - 1))}
-              onNextPage={() =>
-                setNewsPage((page) => Math.min(newsTotalPages || 1, page + 1))
-              }
-            />
-          </div>
-
-          <div className="col-span-12 lg:col-span-4">
-            <ArticleDetailPanel article={selectedArticle} prices={prices} />
-          </div>
-
-          <div className="col-span-12 lg:col-span-3">
-            <HoldingsPanel
-              holdings={holdings}
-              prices={prices}
-              holdingValuesUsdt={holdingValuesUsdt}
-              holdingValuesDisplay={holdingValuesDisplay}
-              currency={displayCurrency}
-              analyses={analyses}
-              onOpenTradeDialog={handleOpenHoldingsTrade}
-              tradeFeedback={holdingsTradeFeedback}
-            />
-          </div>
-        </div>
-      </main>
-
-      <footer className="border-t-4 border-white bg-black mt-8 relative z-10">
-        <div className="max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase text-gray-500">
-            COFFEE DRIVEN DEVELOPMENT • BUGSBYTE 2026
-          </span>
-          <span className="text-[10px] uppercase text-gray-600">
-            NVIDIA NIM • UPHOLD • LIVE NEWS
-          </span>
-        </div>
-      </footer>
-
-      <HoldingsTradeModal
-        request={pendingHoldingsTrade}
-        holdings={holdings}
-        prices={prices}
-        currency={displayCurrency}
-        isSubmitting={holdingsTradeSubmitting}
-        onCancel={() => {
-          if (holdingsTradeSubmitting) return;
-          setPendingHoldingsTrade(null);
-        }}
-        onSubmit={handleSubmitHoldingsTrade}
-      />
-    </div>
+      </div>
+    </>
   );
+}
+
+// Wrapper component to pass props to layout
+function WarRoomWrapper() {
+  const router = useRouter();
+  
+  const {
+    profile,
+    holdings,
+    availableCoins,
+  } = useDashboardData(router);
+
+  const {
+    isLoading,
+    scanCount,
+  } = useNewsAnalysis({
+    profile,
+    holdings,
+  });
+
+  return (
+    <WarRoomLayout
+      scanCount={scanCount}
+      isScanning={isLoading}
+      availableAssets={availableCoins}
+    >
+      <WarRoomContent />
+    </WarRoomLayout>
+  );
+}
+
+// Main Page Export
+export default function WarRoom() {
+  return <WarRoomWrapper />;
 }

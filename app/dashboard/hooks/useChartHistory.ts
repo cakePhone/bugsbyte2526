@@ -34,6 +34,19 @@ const TIMEFRAME_TO_BINANCE: Record<
   "1Y": { interval: "1d", limit: 365 },
 };
 
+// Known crypto symbols - Alpha Vantage treats others as stocks
+const CRYPTO_SYMBOLS = new Set([
+  "BTC", "ETH", "XRP", "SOL", "ADA", "DOGE", "LTC", "AVAX",
+  "DOT", "MATIC", "LINK", "UNI", "ATOM", "FIL", "NEAR",
+  "APE", "SAND", "MANA", "AAVE", "CRV", "COMP", "MKR",
+  "SHIB", "ALGO", "FTM", "HBAR", "BNB", "XLM", "TRX",
+  "USDT", "USDC", "DAI", "BUSD"
+]);
+
+function isCryptoSymbol(symbol: string): boolean {
+  return CRYPTO_SYMBOLS.has(symbol.toUpperCase());
+}
+
 export default function useChartHistory({
   authChecked,
   selectedChartSymbols,
@@ -54,35 +67,66 @@ export default function useChartHistory({
       const tf = TIMEFRAME_TO_BINANCE[timeframe];
       if (!tf) return;
 
+      let points: PricePoint[] = [];
+
       try {
-        let points: PricePoint[] = [];
-
-        const binanceRes = await fetch(
-          `https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(`${symbol}USDT`)}&interval=${encodeURIComponent(tf.interval)}&limit=${tf.limit}`,
-          { cache: "no-store" },
-        );
-
-        if (binanceRes.ok) {
-          const klines = (await binanceRes.json()) as Array<
-            [number, string, string, string, string, string]
-          >;
-          points = Array.isArray(klines)
-            ? klines
-                .map((kline) => ({
-                  timestamp: Number(kline[0]),
-                  price:
-                    (Number(kline[1]) + Number(kline[4])) / 2 ||
-                    Number(kline[4]),
-                }))
-                .filter(
-                  (entry) =>
-                    Number.isFinite(entry.timestamp) &&
-                    Number.isFinite(entry.price) &&
-                    entry.price > 0,
-                )
-            : [];
+        // PRIMARY: Yahoo Finance (fastest, works for both stocks & crypto)
+        const yfParams = new URLSearchParams({
+          action: "chart",
+          symbol,
+          timeframe,
+        });
+        const yfRes = await fetch(`/api/yf?${yfParams.toString()}`, {
+          cache: "no-store",
+        });
+        
+        if (yfRes.ok) {
+          const data = await yfRes.json();
+          if (Array.isArray(data?.points) && data.points.length > 0) {
+            points = data.points.map(
+              (entry: { timestamp: number; price: number }) => ({
+                timestamp: Number(entry.timestamp),
+                price: Number(entry.price),
+              }),
+            ).filter(
+              (entry: PricePoint) =>
+                Number.isFinite(entry.timestamp) &&
+                Number.isFinite(entry.price) &&
+                entry.price > 0,
+            );
+          }
         }
 
+        // FALLBACK 1: Binance for crypto (if Yahoo failed)
+        if (points.length === 0 && isCryptoSymbol(symbol)) {
+          const binanceRes = await fetch(
+            `https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(`${symbol}USDT`)}&interval=${encodeURIComponent(tf.interval)}&limit=${tf.limit}`,
+            { cache: "no-store" },
+          );
+
+          if (binanceRes.ok) {
+            const klines = (await binanceRes.json()) as Array<
+              [number, string, string, string, string, string]
+            >;
+            points = Array.isArray(klines)
+              ? klines
+                  .map((kline) => ({
+                    timestamp: Number(kline[0]),
+                    price:
+                      (Number(kline[1]) + Number(kline[4])) / 2 ||
+                      Number(kline[4]),
+                  }))
+                  .filter(
+                    (entry) =>
+                      Number.isFinite(entry.timestamp) &&
+                      Number.isFinite(entry.price) &&
+                      entry.price > 0,
+                  )
+              : [];
+          }
+        }
+
+        // FALLBACK 2: Internal market history API
         if (points.length === 0) {
           const params = new URLSearchParams({
             symbol,
