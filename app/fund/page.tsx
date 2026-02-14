@@ -1,27 +1,54 @@
-/**
- * FUND ARMY — Add funds to wallet
- * Geisha Gains • Coffee Driven Development
- *
- * Demo page: add any arbitrary amount of USDT to the wallet.
- */
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { Bitcoin, Gem, TrendingUp, Coins } from "lucide-react";
 
-const PRESETS = [100, 500, 1000, 5000, 10000, 50000];
+const SUPPORTED_COINS = ["BTC", "ETH", "XRP"] as const;
+
+type CoinSymbol = (typeof SUPPORTED_COINS)[number];
+
+type QuoteCurrency = "USDT" | "EUR";
+
+interface CoinWallet {
+  id: string;
+  symbol: CoinSymbol;
+  label: string | null;
+  balanceCoin: number;
+  unitPrice: number;
+  currentValue: number;
+  createdAt: number;
+}
 
 export default function FundArmy() {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
-  const [balance, setBalance] = useState(0);
-  const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [wallets, setWallets] = useState<CoinWallet[]>([]);
+  const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>("USDT");
+  const [newWalletCoin, setNewWalletCoin] = useState<CoinSymbol>("BTC");
+  const [newWalletLabel, setNewWalletLabel] = useState("");
+  const [fundAmounts, setFundAmounts] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
 
-  // ── Auth check + load balance ──────────────────────────
+  const currencySign = quoteCurrency === "EUR" ? "€" : "$";
+
+  const totalWalletValue = useMemo(
+    () => wallets.reduce((sum, wallet) => sum + wallet.currentValue, 0),
+    [wallets],
+  );
+
+  const loadWallets = useCallback(async () => {
+    const res = await fetch("/api/user/coin-wallets", { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error("Failed to load wallets");
+    }
+    const data = await res.json();
+    setWallets(data.wallets || []);
+    setQuoteCurrency((data.quoteCurrency || "USDT") as QuoteCurrency);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -36,52 +63,77 @@ export default function FundArmy() {
           return;
         }
 
-        const dataRes = await fetch("/api/user/data");
-        if (dataRes.ok) {
-          const { wallet } = await dataRes.json();
-          setBalance(wallet.balanceUsdt);
-        }
-
+        await loadWallets();
         setAuthChecked(true);
       } catch {
         router.push("/");
       }
     })();
-  }, [router]);
+  }, [router, loadWallets]);
 
-  // ── Submit funding ─────────────────────────────────────
-  const handleFund = useCallback(async () => {
+  const handleCreateWallet = useCallback(async () => {
     setMsg(null);
-    const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) {
-      setMsg({ text: "ENTER A VALID AMOUNT.", error: true });
-      return;
-    }
-
     setLoading(true);
     try {
-      const res = await fetch("/api/user/fund", {
+      const res = await fetch("/api/user/coin-wallets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parsed }),
+        body: JSON.stringify({
+          symbol: newWalletCoin,
+          label: newWalletLabel,
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setMsg({ text: data.error || "FUNDING FAILED.", error: true });
+        setMsg({ text: data.error || "WALLET CREATION FAILED.", error: true });
       } else {
-        setBalance(data.balanceUsdt);
-        setAmount("");
+        setNewWalletLabel("");
         setMsg({
-          text: `$${parsed.toLocaleString()} DEPLOYED. NEW BALANCE: $${data.balanceUsdt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+          text: `${newWalletCoin} WALLET CREATED. NOW ADD COIN FUNDS TO IT.`,
           error: false,
         });
+        await loadWallets();
       }
     } catch {
       setMsg({ text: "NETWORK ERROR.", error: true });
     }
     setLoading(false);
-  }, [amount]);
+  }, [newWalletCoin, newWalletLabel, loadWallets]);
+
+  const handleFundWallet = useCallback(
+    async (walletId: string) => {
+      setMsg(null);
+      const raw = fundAmounts[walletId] || "";
+      const amountCoin = Number(raw);
+      if (!Number.isFinite(amountCoin) || amountCoin <= 0) {
+        setMsg({ text: "ENTER A VALID COIN AMOUNT.", error: true });
+        return;
+      }
+
+      setWalletLoading(true);
+      try {
+        const res = await fetch(`/api/user/coin-wallets/${walletId}/fund`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amountCoin }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setMsg({ text: data.error || "WALLET FUNDING FAILED.", error: true });
+        } else {
+          setFundAmounts((prev) => ({ ...prev, [walletId]: "" }));
+          setMsg({ text: "WALLET FUNDED SUCCESSFULLY.", error: false });
+          await loadWallets();
+        }
+      } catch {
+        setMsg({ text: "NETWORK ERROR.", error: true });
+      }
+      setWalletLoading(false);
+    },
+    [fundAmounts, loadWallets],
+  );
 
   if (!authChecked) {
     return (
@@ -95,14 +147,11 @@ export default function FundArmy() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white font-mono">
-      {/* ═══════ HEADER ═══════ */}
       <header className="border-b-4 border-white bg-black sticky top-0 z-40">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl md:text-2xl font-bold uppercase tracking-tighter">
-              💰 FUND ARMY
-            </h1>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-xl md:text-2xl font-bold uppercase tracking-tighter">
+            💰 FUND ARMY
+          </h1>
           <button
             onClick={() => router.push("/dashboard")}
             className="border-2 border-white px-3 py-1 text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
@@ -112,111 +161,180 @@ export default function FundArmy() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto p-4 space-y-6 pb-20">
-        {/* Current Balance */}
+      <main className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
         <div className="border-4 border-[#D4AF37] bg-black p-6 text-center">
           <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">
-            CURRENT WAR CHEST
+            TOTAL WALLET VALUE
           </div>
           <div className="text-3xl md:text-4xl font-bold text-[#D4AF37]">
-            $
-            {balance.toLocaleString(undefined, {
+            {currencySign}
+            {totalWalletValue.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </div>
-          <div className="text-xs text-gray-600 mt-1">USDT</div>
+          <div className="text-xs text-gray-600 mt-1">{quoteCurrency}</div>
         </div>
 
-        {/* Fund Form */}
         <div className="border-4 border-white bg-black">
           <div className="border-b-4 border-white px-4 py-2">
             <span className="text-xs font-bold tracking-widest text-[#D4AF37]">
-              DEPLOY CAPITAL
+              CREATE COIN WALLET
             </span>
           </div>
           <div className="p-4 space-y-4">
-            <div className="text-xs text-gray-500 mb-2">
-              {">"} SELECT A PRESET OR ENTER A CUSTOM AMOUNT.
+            <div className="text-xs text-gray-500">
+              {">"} START WITH NO WALLETS. CREATE ONE FOR A SPECIFIC COIN, THEN
+              ADD FUNDS IN THAT COIN.
             </div>
 
-            {/* Presets */}
             <div className="grid grid-cols-3 gap-2">
-              {PRESETS.map((preset) => (
+              {SUPPORTED_COINS.map((coin) => (
                 <button
-                  key={preset}
-                  onClick={() => setAmount(String(preset))}
-                  className={`border-4 px-3 py-3 text-sm font-bold uppercase tracking-wide transition-all ${
-                    amount === String(preset)
+                  key={coin}
+                  onClick={() => setNewWalletCoin(coin)}
+                  className={`border-4 px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
+                    newWalletCoin === coin
                       ? "border-[#D4AF37] bg-[#D4AF37] text-black"
                       : "border-gray-600 hover:border-white text-white"
                   }`}
                 >
-                  ${preset.toLocaleString()}
+                  {coin}
                 </button>
               ))}
             </div>
 
-            {/* Custom Amount */}
             <div>
               <label className="block text-xs text-gray-500 mb-1 uppercase tracking-widest">
-                CUSTOM AMOUNT (USD)
+                WALLET LABEL (OPTIONAL)
               </label>
               <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFund()}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-lg focus:border-[#D4AF37] focus:outline-none transition-colors placeholder:text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                type="text"
+                value={newWalletLabel}
+                onChange={(e) => setNewWalletLabel(e.target.value)}
+                placeholder="e.g. SWING STACK"
+                className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-[#D4AF37] focus:outline-none transition-colors placeholder:text-gray-700"
               />
             </div>
 
-            {/* Preview */}
-            {amount && parseFloat(amount) > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="border-4 border-gray-700 px-4 py-3 flex items-center justify-between"
-              >
-                <span className="text-xs text-gray-500">
-                  NEW BALANCE AFTER FUNDING
-                </span>
-                <span className="text-sm font-bold text-[#D4AF37]">
-                  $
-                  {(balance + parseFloat(amount)).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </motion.div>
-            )}
-
-            {msg && (
-              <div
-                className={`text-xs font-bold ${msg.error ? "text-[#FF0000]" : "text-green-400"}`}
-              >
-                {">"} {msg.text}
-              </div>
-            )}
-
             <button
-              onClick={handleFund}
-              disabled={loading || !amount || parseFloat(amount) <= 0}
-              className="w-full border-4 border-[#D4AF37] bg-[#D4AF37] text-black px-4 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleCreateWallet}
+              disabled={loading}
+              className="w-full border-4 border-[#D4AF37] bg-[#D4AF37] text-black px-4 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-colors disabled:opacity-50"
             >
-              {loading ? "DEPLOYING..." : "> DEPLOY FUNDS"}
+              {loading ? "CREATING..." : `> CREATE ${newWalletCoin} WALLET`}
             </button>
-
-            <div className="text-[9px] text-gray-600 text-center">
-              THIS IS A SIMULATED FUNDING MECHANISM FOR DEMONSTRATION PURPOSES
-              ONLY.
-            </div>
           </div>
         </div>
+
+        {wallets.length === 0 ? (
+          <div className="border-4 border-gray-700 bg-black p-8 text-center text-gray-500 text-sm">
+            NO COIN WALLETS YET. CREATE YOUR FIRST ONE ABOVE.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {wallets.map((wallet) => (
+              <div
+                key={wallet.id}
+                className="border-4 border-white bg-black p-4 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CoinIcon symbol={wallet.symbol} />
+                    <div>
+                      <div className="text-lg font-bold tracking-wide">
+                        {wallet.symbol}
+                      </div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-widest">
+                        {wallet.label || "UNNAMED WALLET"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-[#D4AF37]">
+                      {currencySign}
+                      {wallet.currentValue.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      @ {currencySign}
+                      {wallet.unitPrice.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-2 border-gray-700 p-3">
+                  <div className="text-xs text-gray-500 mb-1">COIN BALANCE</div>
+                  <div className="text-xl font-bold">
+                    {wallet.balanceCoin.toLocaleString(undefined, {
+                      maximumFractionDigits: 8,
+                    })}{" "}
+                    {wallet.symbol}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest">
+                    ADD FUNDS ({wallet.symbol})
+                  </label>
+                  <input
+                    type="number"
+                    value={fundAmounts[wallet.id] || ""}
+                    onChange={(e) =>
+                      setFundAmounts((prev) => ({
+                        ...prev,
+                        [wallet.id]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleFundWallet(wallet.id)
+                    }
+                    placeholder={`0.00 ${wallet.symbol}`}
+                    min="0"
+                    step="0.00000001"
+                    className="w-full bg-black border-4 border-gray-600 text-white font-mono px-4 py-3 text-sm focus:border-[#D4AF37] focus:outline-none transition-colors placeholder:text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    onClick={() => handleFundWallet(wallet.id)}
+                    disabled={walletLoading}
+                    className="w-full border-4 border-white bg-black text-white px-4 py-3 text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                  >
+                    {walletLoading
+                      ? "FUNDING..."
+                      : `> FUND ${wallet.symbol} WALLET`}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {msg && (
+          <div
+            className={`text-xs font-bold ${msg.error ? "text-[#FF0000]" : "text-green-400"}`}
+          >
+            {">"} {msg.text}
+          </div>
+        )}
       </main>
     </div>
   );
+}
+
+function CoinIcon({ symbol }: { symbol: string }) {
+  if (symbol === "BTC") {
+    return <Bitcoin className="w-5 h-5 text-[#D4AF37]" />;
+  }
+  if (symbol === "ETH") {
+    return <Gem className="w-5 h-5 text-white" />;
+  }
+  if (symbol === "XRP") {
+    return <TrendingUp className="w-5 h-5 text-white" />;
+  }
+  return <Coins className="w-5 h-5 text-gray-400" />;
 }

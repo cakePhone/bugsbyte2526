@@ -22,9 +22,25 @@ model User {
   updatedAt    DateTime @updatedAt
   
   wallet      Wallet?
+  coinWallets CoinWallet[]
   transactions Transaction[]
   
   @@map("users")
+}
+
+model CoinWallet {
+  id          String   @id @default(cuid())
+  userId      String
+  symbol      String   // BTC, ETH, XRP
+  label       String?  // Optional user-defined wallet label
+  balanceCoin Float    @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, symbol])
+  @@map("coin_wallets")
 }
 
 model Wallet {
@@ -80,4 +96,8 @@ model MarketSnap {
 enum TradeType {
   BUY
   SELL
+  TOPUP
+  WITHDRAWAL
+  TRANSFER
+  ADJUSTMENT
 }

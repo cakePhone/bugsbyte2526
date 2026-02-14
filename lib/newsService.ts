@@ -2,7 +2,7 @@
  * News Ingestion Service
  * Geisha Gains • Coffee Driven Development
  *
- * Fetches live financial news from CryptoPanic API with robust mock fallback.
+ * Fetches live financial news from cryptocurrency.cv API.
  * Returns: headline, full_content, source, timestamp, category, symbols
  */
 
@@ -13,175 +13,213 @@ export interface NewsArticle {
   source: string;
   timestamp: string;
   url?: string;
-  category: 'REGULATION' | 'MARKET' | 'TECH' | 'MACRO' | 'SECURITY' | 'ADOPTION';
+  category:
+    | "REGULATION"
+    | "MARKET"
+    | "TECH"
+    | "MACRO"
+    | "SECURITY"
+    | "ADOPTION";
   symbols: string[];
-  sentiment_hint?: 'positive' | 'negative' | 'neutral';
+  sentiment_hint?: "positive" | "negative" | "neutral";
 }
 
-// ── CryptoPanic API ─────────────────────────────────────────────
+export interface FetchLiveNewsOptions {
+  limit?: number;
+  page?: number;
+  perPage?: number;
+  latestTimestamp?: string;
+  knownIds?: string[];
+}
 
-const CRYPTOPANIC_API = 'https://cryptopanic.com/api/v1/posts';
+// ── Live News Endpoints ──────────────────────────────────────────
 
-export async function fetchLiveNews(limit = 10): Promise<NewsArticle[]> {
-  const apiKey = process.env.CRYPTOPANIC_API_KEY;
+const PRIMARY_NEWS_ENDPOINT = "https://cryptocurrency.cv/api/news";
+const SECONDARY_NEWS_ENDPOINT =
+  "https://min-api.cryptocompare.com/data/v2/news/?lang=EN";
 
-  if (apiKey) {
+function buildNewsEndpoints(): string[] {
+  const configured = process.env.NEWS_API_URL;
+  const endpoints = [
+    configured,
+    PRIMARY_NEWS_ENDPOINT,
+    SECONDARY_NEWS_ENDPOINT,
+  ].filter(Boolean) as string[];
+
+  return Array.from(new Set(endpoints));
+}
+
+export async function fetchLiveNews(
+  input: number | FetchLiveNewsOptions = 10,
+): Promise<NewsArticle[]> {
+  const options: FetchLiveNewsOptions =
+    typeof input === "number" ? { limit: input } : input;
+
+  const maxItems = Math.max(1, Math.min(100, Number(options.limit || 10)));
+  const page = Math.max(1, Number(options.page || 1));
+  const perPage = Math.max(
+    10,
+    Math.min(100, Number(options.perPage || maxItems)),
+  );
+  const latestMs = options.latestTimestamp
+    ? new Date(options.latestTimestamp).getTime()
+    : 0;
+  const knownIdSet = new Set((options.knownIds || []).map((id) => String(id)));
+
+  const endpoints = buildNewsEndpoints();
+  const errors: Array<{ endpoint: string; error: unknown }> = [];
+
+  for (const endpoint of endpoints) {
     try {
-      const res = await fetch(
-        `${CRYPTOPANIC_API}/?auth_token=${apiKey}&kind=news&filter=important&currencies=BTC,ETH,XRP&public=true`,
-        { cache: 'no-store' }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        return (data.results || []).slice(0, limit).map(mapCryptoPanicArticle);
+      const url = endpoint.includes("cryptocurrency.cv")
+        ? `${endpoint}?page=${page}&perPage=${perPage}`
+        : endpoint;
+
+      const res = await fetch(url, { cache: "no-store" });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(
+          `News API request failed (${res.status}): ${errorText.slice(0, 200)}`,
+        );
       }
-    } catch (e) {
-      console.error('CryptoPanic fetch failed:', e);
+
+      const data = await res.json();
+      const items = normalizeNewsPayload(data);
+
+      if (!items.length) {
+        throw new Error("News payload contained zero items");
+      }
+
+      const mapped = items.map((item) => mapNewsArticle(item, endpoint));
+      const filtered = mapped
+        .filter((article) => !knownIdSet.has(article.id))
+        .filter((article) => {
+          if (!latestMs || !Number.isFinite(latestMs)) return true;
+          const articleMs = new Date(article.timestamp).getTime();
+          return Number.isFinite(articleMs) && articleMs > latestMs;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        );
+
+      return filtered.slice(0, maxItems);
+    } catch (error) {
+      errors.push({ endpoint, error });
     }
   }
 
-  // Fallback to robust mock news
-  return generateMockNews(limit);
+  console.error("All news providers failed:", errors);
+  throw new Error("Unable to fetch live news");
 }
 
-function mapCryptoPanicArticle(item: any): NewsArticle {
-  const symbols: string[] = (item.currencies || []).map((c: any) => c.code);
-  let category: NewsArticle['category'] = 'MARKET';
-  const title = (item.title || '').toUpperCase();
+function normalizeNewsPayload(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.articles)) return data.articles;
+  if (Array.isArray(data?.news)) return data.news;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.Data)) return data.Data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
 
-  if (title.includes('REGULAT') || title.includes('SEC') || title.includes('BAN')) {
-    category = 'REGULATION';
-  } else if (title.includes('HACK') || title.includes('EXPLOIT') || title.includes('BREACH')) {
-    category = 'SECURITY';
-  } else if (title.includes('FED') || title.includes('INFLATION') || title.includes('GDP')) {
-    category = 'MACRO';
-  } else if (title.includes('ADOPT') || title.includes('PARTNER') || title.includes('LAUNCH')) {
-    category = 'ADOPTION';
-  } else if (title.includes('UPGRADE') || title.includes('FORK') || title.includes('PROTOCOL')) {
-    category = 'TECH';
+function mapNewsArticle(item: any, endpoint: string): NewsArticle {
+  const headline =
+    item.title || item.headline || item.name || "UNKNOWN HEADLINE";
+  const content =
+    item.content || item.summary || item.description || item.body || headline;
+
+  const extractedSymbols = extractSymbols([headline, content]);
+  const rawSymbols =
+    item.symbols ||
+    item.tickers ||
+    item.assets ||
+    item.coins ||
+    item.currencies;
+
+  const symbols: string[] = Array.isArray(rawSymbols)
+    ? rawSymbols
+        .map((entry: any) =>
+          typeof entry === "string"
+            ? entry.toUpperCase()
+            : String(entry?.code || entry?.symbol || "").toUpperCase(),
+        )
+        .filter(Boolean)
+    : extractedSymbols;
+
+  let category: NewsArticle["category"] = "MARKET";
+  const title = headline.toUpperCase();
+
+  if (
+    title.includes("REGULAT") ||
+    title.includes("SEC") ||
+    title.includes("BAN")
+  ) {
+    category = "REGULATION";
+  } else if (
+    title.includes("HACK") ||
+    title.includes("EXPLOIT") ||
+    title.includes("BREACH")
+  ) {
+    category = "SECURITY";
+  } else if (
+    title.includes("FED") ||
+    title.includes("INFLATION") ||
+    title.includes("GDP")
+  ) {
+    category = "MACRO";
+  } else if (
+    title.includes("ADOPT") ||
+    title.includes("PARTNER") ||
+    title.includes("LAUNCH")
+  ) {
+    category = "ADOPTION";
+  } else if (
+    title.includes("UPGRADE") ||
+    title.includes("FORK") ||
+    title.includes("PROTOCOL")
+  ) {
+    category = "TECH";
   }
 
   return {
-    id: String(item.id || Date.now()),
-    headline: item.title || 'UNKNOWN HEADLINE',
-    full_content: item.body || item.title || '',
-    source: item.source?.title || 'CryptoPanic',
-    timestamp: item.published_at || new Date().toISOString(),
-    url: item.url,
+    id: String(
+      item.id ||
+        item.guid ||
+        item.url ||
+        item.link ||
+        `${headline}-${Date.now()}`,
+    ),
+    headline,
+    full_content: content,
+    source:
+      item.source?.title ||
+      item.source ||
+      item.publisher ||
+      (endpoint.includes("cryptocompare")
+        ? "cryptocompare"
+        : "cryptocurrency.cv"),
+    timestamp:
+      item.published_at ||
+      item.publishedAt ||
+      item.timestamp ||
+      item.date ||
+      new Date().toISOString(),
+    url: item.original_url || item.url || item.link,
     category,
-    symbols: symbols.length > 0 ? symbols : ['BTC'],
-    sentiment_hint: item.votes
-      ? item.votes.positive > item.votes.negative
-        ? 'positive'
-        : item.votes.negative > item.votes.positive
-        ? 'negative'
-        : 'neutral'
-      : 'neutral',
+    symbols: symbols.length > 0 ? symbols : ["BTC"],
+    sentiment_hint:
+      String(item.sentiment || "").toLowerCase() === "positive"
+        ? "positive"
+        : String(item.sentiment || "").toLowerCase() === "negative"
+          ? "negative"
+          : "neutral",
   };
 }
 
-// ── Mock News Generator ─────────────────────────────────────────
-
-const MOCK_NEWS: Omit<NewsArticle, 'id' | 'timestamp'>[] = [
-  {
-    headline: 'EU ANNOUNCES SWEEPING STABLECOIN REGULATIONS — EXCHANGES SCRAMBLE',
-    full_content:
-      'The European Union has passed emergency legislation requiring all stablecoin issuers to maintain 1:1 reserves verified by central banks. Exchanges operating in the EU must comply within 90 days or face license revocation. Market analysts predict a significant liquidity crunch as USDT and USDC holders rush to de-risk their positions.',
-    source: 'Reuters',
-    category: 'REGULATION',
-    symbols: ['BTC', 'ETH', 'USDT'],
-    sentiment_hint: 'negative',
-  },
-  {
-    headline: 'BITCOIN HASHRATE REACHES ALL-TIME HIGH AS MINING DIFFICULTY SURGES',
-    full_content:
-      'The Bitcoin network hashrate has surpassed 800 EH/s for the first time, driven by institutional mining operations expanding across Texas and the Nordic region. Mining difficulty adjustment is expected to increase by 8.3%, putting further pressure on less efficient mining operations. This is broadly seen as a bullish fundamental signal.',
-    source: 'CoinDesk',
-    category: 'TECH',
-    symbols: ['BTC'],
-    sentiment_hint: 'positive',
-  },
-  {
-    headline: 'FEDERAL RESERVE SIGNALS EMERGENCY RATE CUT — MARKETS BRACE',
-    full_content:
-      'In an unscheduled press conference, the Federal Reserve Chair signaled an emergency 50bp rate cut may be imminent, citing deteriorating employment data. Treasury yields plummeted across the curve. Risk assets including crypto rallied sharply in after-hours trading. Traditional safe havens like gold also moved higher.',
-    source: 'Bloomberg',
-    category: 'MACRO',
-    symbols: ['BTC', 'ETH', 'XRP'],
-    sentiment_hint: 'positive',
-  },
-  {
-    headline: 'MAJOR EXCHANGE SUFFERS $180M HOT WALLET BREACH',
-    full_content:
-      'A top-tier centralized exchange confirmed that its hot wallet was compromised overnight, resulting in the theft of approximately $180M in various cryptocurrencies. The exchange has halted withdrawals and is working with law enforcement. On-chain analysis indicates the stolen funds are being laundered through mixer protocols.',
-    source: 'The Block',
-    category: 'SECURITY',
-    symbols: ['BTC', 'ETH'],
-    sentiment_hint: 'negative',
-  },
-  {
-    headline: 'BLACKROCK ETH ETF APPROVAL EXPECTED WITHIN DAYS',
-    full_content:
-      'Multiple sources within the SEC indicate that BlackRock\'s spot Ethereum ETF application is on the verge of approval. The fund would be the largest institutional vehicle for ETH exposure, with an initial seed capital of $2 billion. Trading could begin as early as next week.',
-    source: 'CNBC',
-    category: 'ADOPTION',
-    symbols: ['ETH'],
-    sentiment_hint: 'positive',
-  },
-  {
-    headline: 'CHINA PBOC LAUNCHES DIGITAL YUAN TRADE SETTLEMENT PILOT',
-    full_content:
-      'The People\'s Bank of China has launched a digital yuan pilot program for international trade settlement, partnering with Brazil, Saudi Arabia, and South Africa. This move could significantly reduce demand for dollar-denominated stablecoins in cross-border transactions.',
-    source: 'Financial Times',
-    category: 'MACRO',
-    symbols: ['BTC', 'USDT'],
-    sentiment_hint: 'negative',
-  },
-  {
-    headline: 'XRP WINS LANDMARK COURT RULING — TOKEN NOT A SECURITY',
-    full_content:
-      'A federal appeals court has upheld a lower court ruling that XRP is not a security when sold on secondary markets. Ripple Labs celebrated the victory as legal certainty that paves the way for institutional adoption of XRP for cross-border payment solutions.',
-    source: 'Reuters',
-    category: 'REGULATION',
-    symbols: ['XRP'],
-    sentiment_hint: 'positive',
-  },
-  {
-    headline: 'ETHEREUM LAYER-2 CONGESTION SPIKES — GAS FEES HIT 200 GWEI',
-    full_content:
-      'A surge in meme coin activity on Ethereum Layer-2 rollups has caused base layer gas fees to spike to levels not seen since 2024. Average transaction costs exceeded $15, forcing DeFi users to delay non-urgent transactions. The congestion is expected to persist for 48 hours.',
-    source: 'Delphi Digital',
-    category: 'TECH',
-    symbols: ['ETH'],
-    sentiment_hint: 'negative',
-  },
-  {
-    headline: 'SAUDI ARAMCO ANNOUNCES BTC TREASURY ALLOCATION — $500M INITIAL PURCHASE',
-    full_content:
-      'Saudi Aramco, the world\'s largest oil company, has disclosed a $500M Bitcoin allocation as part of a broader sovereign digital asset strategy. The purchase was executed OTC to minimize market impact. This marks the first major oil sector corporation to adopt BTC as a treasury reserve asset.',
-    source: 'Bloomberg',
-    category: 'ADOPTION',
-    symbols: ['BTC'],
-    sentiment_hint: 'positive',
-  },
-  {
-    headline: 'GLOBAL CRYPTO TAX CRACKDOWN — G7 AGREES ON UNIFIED REPORTING FRAMEWORK',
-    full_content:
-      'The G7 nations have agreed to implement a unified cryptocurrency tax reporting framework effective Q1 2027. All exchanges will be required to report user transactions exceeding $600 annually. Privacy coins face potential delistings across regulated platforms.',
-    source: 'Financial Times',
-    category: 'REGULATION',
-    symbols: ['BTC', 'ETH', 'XRP'],
-    sentiment_hint: 'negative',
-  },
-];
-
-function generateMockNews(limit: number): NewsArticle[] {
-  const shuffled = [...MOCK_NEWS].sort(() => Math.random() - 0.5);
-  const now = Date.now();
-
-  return shuffled.slice(0, limit).map((article, i) => ({
-    ...article,
-    id: `mock-${now}-${i}`,
-    timestamp: new Date(now - i * 15 * 60 * 1000).toISOString(), // Stagger by 15 min
-  }));
+function extractSymbols(chunks: string[]): string[] {
+  const supported = ["BTC", "ETH", "XRP", "USDT"];
+  const text = chunks.join(" ").toUpperCase();
+  return supported.filter((sym) => new RegExp(`\\b${sym}\\b`, "i").test(text));
 }

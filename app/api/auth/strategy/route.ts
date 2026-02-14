@@ -16,7 +16,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const { riskProfile } = await req.json();
+    const { riskProfile, valuationCurrency } = await req.json();
 
     if (!riskProfile) {
       return NextResponse.json(
@@ -25,9 +25,27 @@ export async function PUT(req: Request) {
       );
     }
 
+    const existing = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: { preferences: true },
+    });
+
+    const preferences =
+      existing?.preferences && typeof existing.preferences === "object"
+        ? (existing.preferences as Record<string, unknown>)
+        : {};
+
+    const nextPreferences =
+      valuationCurrency === "USDT" || valuationCurrency === "EUR"
+        ? { ...preferences, valuation_currency: valuationCurrency }
+        : preferences;
+
     await prisma.user.update({
       where: { id: session.sub },
-      data: { riskProfile },
+      data: {
+        riskProfile,
+        preferences: nextPreferences,
+      },
     });
 
     return NextResponse.json({ ok: true });

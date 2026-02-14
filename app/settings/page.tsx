@@ -44,6 +44,8 @@ interface RiskProfile {
   geopolitical_sensitivity: string;
 }
 
+type ValuationCurrency = "USDT" | "EUR";
+
 export default function BaseOfOperations() {
   const router = useRouter();
 
@@ -72,6 +74,8 @@ export default function BaseOfOperations() {
     error: boolean;
   } | null>(null);
   const [stratLoading, setStratLoading] = useState(false);
+  const [valuationCurrency, setValuationCurrency] =
+    useState<ValuationCurrency>("USDT");
 
   // Terminate session
   const [confirmTerminate, setConfirmTerminate] = useState(false);
@@ -93,6 +97,9 @@ export default function BaseOfOperations() {
         setUserEmail(user.email);
         if (user.riskProfile) {
           setStrategy(user.riskProfile as RiskProfile);
+        }
+        if (user.preferences?.valuation_currency === "EUR") {
+          setValuationCurrency("EUR");
         }
         setAuthChecked(true);
       } catch {
@@ -150,7 +157,10 @@ export default function BaseOfOperations() {
       const res = await fetch("/api/auth/strategy", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ riskProfile: strategy }),
+        body: JSON.stringify({
+          riskProfile: strategy,
+          valuationCurrency,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -164,7 +174,7 @@ export default function BaseOfOperations() {
       setStratMsg({ text: "NETWORK ERROR.", error: true });
     }
     setStratLoading(false);
-  }, [strategy]);
+  }, [strategy, valuationCurrency]);
 
   // ── Terminate Session ──────────────────────────────────
   const handleLogout = useCallback(async () => {
@@ -329,6 +339,30 @@ export default function BaseOfOperations() {
                 setStrategy((s) => ({ ...s, geopolitical_sensitivity: v }))
               }
             />
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">
+                WALLET VALUATION
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(["USDT", "EUR"] as ValuationCurrency[]).map((curr) => {
+                  const selected = valuationCurrency === curr;
+                  return (
+                    <button
+                      key={curr}
+                      onClick={() => setValuationCurrency(curr)}
+                      className={`border-4 px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
+                        selected
+                          ? "border-[#D4AF37] bg-[#D4AF37] text-black"
+                          : "border-gray-600 hover:border-white text-white"
+                      }`}
+                    >
+                      {curr}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {stratMsg && (
               <div

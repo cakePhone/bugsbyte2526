@@ -21,6 +21,7 @@ export async function GET() {
       id: true,
       email: true,
       riskProfile: true,
+      preferences: true,
       onboarded: true,
     },
   });

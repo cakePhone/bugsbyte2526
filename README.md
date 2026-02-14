@@ -2,7 +2,7 @@
 
 # � Geisha Gains — War Room
 
-### *Brutalist Intelligence-Driven Crypto Trading Simulator*
+### _Brutalist Intelligence-Driven Crypto Trading Simulator_
 
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
@@ -21,14 +21,13 @@
 
 </div>
 
-
 ---
 
 <div align="center">
 
 <img width="1270" height="669" alt="geisha gains war room" src="https://github.com/user-attachments/assets/geisha-gains-dashboard.png" />
 
-*🏯 Geisha Gains — War Room Dashboard*
+_🏯 Geisha Gains — War Room Dashboard_
 
 </div>
 
@@ -56,7 +55,7 @@ If you're a recruiter or collaborator, feel free to reach out:
 
 - 🏯 **Brutalist Design** — Dark theme with red accents and monospace fonts
 - 🤖 **NVIDIA NIM Integration** — Llama-3 70B AI for news analysis
-- 📰 **Real-time News Analysis** — CryptoPanic API with intelligent filtering
+- 📰 **Real-time News Analysis** — Live crypto news API with intelligent filtering
 - 👤 **User Profiling** — Terminal-style onboarding capturing trading psychology
 - 📊 **War Room Dashboard** — Multi-panel intelligence display
 - 🎯 **Threat Radar** — 4-axis visualization of market risks
@@ -180,7 +179,7 @@ geisha-gains/
 │   ├── layout.tsx                    # Root layout
 │   └── page.tsx                      # Home (onboarding flow)
 ├── 📁 lib/
-│   └── newsService.ts                # CryptoPanic API integration
+│   └── newsService.ts                # Live news API integration
 ├── 📁 prisma/
 │   └── schema.prisma                 # Database schema
 ├── 📁 public/
@@ -209,7 +208,7 @@ geisha-gains/
    - Focus Sectors (CRYPTO/STOCKS/FOREX/COMMODITIES)
    - Geopolitical Sensitivity (IGNORE/AWARE/PARANOID)
 
-3. **News Intelligence** — Fetches crypto news from CryptoPanic API
+3. **News Intelligence** — Fetches crypto news from live news API
 4. **AI Analysis** — NVIDIA NIM Llama-3 70B analyzes news against user profile
 5. **War Room Dashboard** — Real-time threat assessment and action alerts
 
@@ -227,7 +226,7 @@ geisha-gains/
 - [x] � Brutalist dark theme with red accents
 - [x] 👤 Terminal-style user profiling (The Interrogation)
 - [x] 🤖 NVIDIA NIM Llama-3 70B integration
-- [x] 📰 CryptoPanic API news ingestion
+- [x] 📰 Live news API ingestion
 - [x] 📊 War Room dashboard with multi-panel display
 - [x] 🎯 Threat Radar 4-axis visualization
 - [x] ⚡ Action Overlay lethal alerts
@@ -251,31 +250,37 @@ Contributions are what make the open-source community such an amazing place to l
 ### How to Contribute
 
 1. **Fork the Project**
+
    ```bash
    # Click the 'Fork' button at the top right of this page
    ```
 
 2. **Clone your Fork**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/geisha-gains.git
    ```
 
 3. **Create a Feature Branch**
+
    ```bash
    git checkout -b feature/AmazingFeature
    ```
 
 4. **Make your Changes**
+
    ```bash
    # Code your amazing feature
    ```
 
 5. **Commit your Changes**
+
    ```bash
    git commit -m "Add: AmazingFeature"
    ```
 
 6. **Push to the Branch**
+
    ```bash
    git push origin feature/AmazingFeature
    ```

@@ -26,16 +26,35 @@ export async function POST(req: Request) {
       );
     }
 
-    const wallet = await prisma.wallet.upsert({
-      where: { userId: session.sub },
-      update: {
-        balanceUsdt: { increment: amount },
-      },
-      create: {
-        userId: session.sub,
-        balanceUsdt: amount,
-        assets: {},
-      },
+    const wallet = await prisma.$transaction(async (tx) => {
+      const updatedWallet = await tx.wallet.upsert({
+        where: { userId: session.sub },
+        update: {
+          balanceUsdt: { increment: amount },
+        },
+        create: {
+          userId: session.sub,
+          balanceUsdt: amount,
+          assets: {},
+        },
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: session.sub,
+          symbol: "USDT",
+          type: "TOPUP" as never,
+          amount,
+          price: 1,
+          totalValue: amount,
+          exchange: "WALLET",
+          reasoning: "USER FUNDED WALLET",
+          confidence: null,
+          pnl: null,
+        },
+      });
+
+      return updatedWallet;
     });
 
     return NextResponse.json({
