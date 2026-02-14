@@ -533,7 +533,7 @@ export default function SuperpositionedGraph({
       }
     >
       {/* === Top Bar: Asset Context === */}
-      <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
+      <div className="border-b-4 border-white p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* Add Layer Button */}
           <button

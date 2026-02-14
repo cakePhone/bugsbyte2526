@@ -106,7 +106,7 @@ export default function IntelligenceExchangeBar({
     >
       {/* Header */}
       <div
-        className={`border-b-4 px-4 py-2 flex items-center justify-between cursor-pointer select-none ${isBuyMode ? "border-[#00FF88] bg-[#00FF88]/10" : "border-white"}`}
+        className={`px-4 py-2 flex items-center justify-between cursor-pointer select-none ${isBuyMode ? "border-[#00FF88] bg-[#00FF88]/10" : "border-white"}`}
       >
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-black font-mono uppercase tracking-widest text-white">
