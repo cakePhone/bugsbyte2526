@@ -406,6 +406,27 @@ export default function SuperpositionedGraph({
         }
 
         currentSeriesMap.set(layer.symbol, series);
+      } else {
+        // Update existing series options to reflect current layer color/style
+        if (isArea) {
+          series.applyOptions({
+            lineColor: layer.color,
+            topColor: layer.color + "33",
+            bottomColor: layer.color + "05",
+            lineWidth: layer.isPrimary ? 3 : 2,
+            lineStyle:
+              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+            crosshairMarkerBackgroundColor: layer.color,
+          });
+        } else {
+          series.applyOptions({
+            color: layer.color,
+            lineWidth: layer.isPrimary ? 3 : 2,
+            lineStyle:
+              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+            crosshairMarkerBackgroundColor: layer.color,
+          });
+        }
       }
 
       // Set data - all layers share the same timeScale automatically
