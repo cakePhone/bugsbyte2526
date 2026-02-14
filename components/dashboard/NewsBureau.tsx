@@ -440,19 +440,24 @@ export default function NewsBureau({
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    {/* AI Analysis Panel (Hoverable) */}
+                    {/* AI Analysis Panel (Click-to-toggle, inline) */}
                     <div className="border-t-2 border-zinc-800 bg-zinc-950">
                       <button
-                        onClick={() => analyzeArticle(article)}
-                        onMouseEnter={() => analysis && setShowAiPanel(article.id)}
-                        onMouseLeave={() => setShowAiPanel(null)}
-                        className="w-full px-4 py-2 flex items-center gap-2 hover:bg-zinc-900 transition-colors relative"
+                        onClick={() => {
+                          if (analysis) {
+                            // Toggle visibility of existing analysis
+                            setShowAiPanel(showingAi ? null : article.id);
+                          } else {
+                            analyzeArticle(article);
+                          }
+                        }}
+                        className="w-full px-4 py-2 flex items-center gap-2 hover:bg-zinc-900 transition-colors"
                       >
                         <span className="w-6 h-6 border-2 border-[#76B900] bg-[#76B900]/10 flex items-center justify-center text-[8px] font-black text-[#76B900]">
                           AI
                         </span>
                         <span className="text-[9px] font-bold text-zinc-400 uppercase">
-                          {isAnalyzing ? "ANALYZING..." : analysis ? "VIEW AI REPORT" : "GENERATE AI ANALYSIS"}
+                          {isAnalyzing ? "ANALYZING..." : analysis ? (showingAi ? "HIDE AI REPORT" : "VIEW AI REPORT") : "GENERATE AI ANALYSIS"}
                         </span>
                         {isAnalyzing && (
                           <motion.span
@@ -463,68 +468,75 @@ export default function NewsBureau({
                             ⟳
                           </motion.span>
                         )}
+                        {analysis && (
+                          <motion.span
+                            animate={{ rotate: showingAi ? 180 : 0 }}
+                            className="text-zinc-500 text-xs ml-auto"
+                          >
+                            ▼
+                          </motion.span>
+                        )}
+                      </button>
 
-                        {/* AI Analysis Popup */}
-                        <AnimatePresence>
-                          {showingAi && analysis && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="absolute left-0 right-0 top-full z-50 mx-4"
-                              onMouseEnter={() => setShowAiPanel(article.id)}
-                              onMouseLeave={() => setShowAiPanel(null)}
-                            >
-                              <div className="border-4 border-[#76B900] bg-black p-3 shadow-[4px_4px_0_0_#76B900]">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-[10px] font-black text-[#76B900] uppercase tracking-wider">
-                                    NVIDIA NIM ANALYSIS
-                                  </span>
-                                  <span className="text-[8px] text-zinc-500">
-                                    {analysis.confidence}% CONFIDENCE
+                      {/* Inline AI Analysis Panel — full width, not absolute */}
+                      <AnimatePresence>
+                        {showingAi && analysis && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="border-4 border-[#76B900] bg-black p-4 mx-4 mb-3 shadow-[4px_4px_0_0_#76B900]">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-[10px] font-black text-[#76B900] uppercase tracking-wider">
+                                  NVIDIA NIM ANALYSIS
+                                </span>
+                                <span className="text-[8px] text-zinc-500">
+                                  {analysis.confidence}% CONFIDENCE
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-3 mb-3">
+                                <div className="border border-zinc-700 p-2">
+                                  <span className="text-[7px] text-zinc-500 uppercase block mb-1">IMPACT</span>
+                                  <span className={`text-sm font-black ${
+                                    analysis.impact === "HIGH" ? "text-[#FF0000]" :
+                                    analysis.impact === "MEDIUM" ? "text-amber-400" : "text-emerald-400"
+                                  }`}>
+                                    {analysis.impact}
                                   </span>
                                 </div>
-
-                                <div className="grid grid-cols-3 gap-2 mb-2">
-                                  <div className="border border-zinc-700 p-2">
-                                    <span className="text-[7px] text-zinc-500 uppercase block">IMPACT</span>
-                                    <span className={`text-xs font-black ${
-                                      analysis.impact === "HIGH" ? "text-[#FF0000]" :
-                                      analysis.impact === "MEDIUM" ? "text-amber-400" : "text-emerald-400"
-                                    }`}>
-                                      {analysis.impact}
-                                    </span>
-                                  </div>
-                                  <div className="border border-zinc-700 p-2">
-                                    <span className="text-[7px] text-zinc-500 uppercase block">SENTIMENT</span>
-                                    <span className={`text-xs font-black ${
-                                      analysis.sentiment === "BULLISH" ? "text-emerald-400" :
-                                      analysis.sentiment === "BEARISH" ? "text-[#FF0000]" : "text-zinc-400"
-                                    }`}>
-                                      {analysis.sentiment}
-                                    </span>
-                                  </div>
-                                  <div className="border border-zinc-700 p-2">
-                                    <span className="text-[7px] text-zinc-500 uppercase block">AFFECTED</span>
-                                    <span className="text-xs font-black text-white">
-                                      {analysis.affectedHoldings.length > 0
-                                        ? analysis.affectedHoldings.join(", ")
-                                        : "NONE"}
-                                    </span>
-                                  </div>
+                                <div className="border border-zinc-700 p-2">
+                                  <span className="text-[7px] text-zinc-500 uppercase block mb-1">SENTIMENT</span>
+                                  <span className={`text-sm font-black ${
+                                    analysis.sentiment === "BULLISH" ? "text-emerald-400" :
+                                    analysis.sentiment === "BEARISH" ? "text-[#FF0000]" : "text-zinc-400"
+                                  }`}>
+                                    {analysis.sentiment}
+                                  </span>
                                 </div>
-
-                                <div className="border-t border-zinc-700 pt-2">
-                                  <span className="text-[7px] text-zinc-500 uppercase block mb-1">RECOMMENDATION</span>
-                                  <p className="text-[10px] text-white leading-relaxed">
-                                    {analysis.recommendation}
-                                  </p>
+                                <div className="border border-zinc-700 p-2">
+                                  <span className="text-[7px] text-zinc-500 uppercase block mb-1">AFFECTED</span>
+                                  <span className="text-sm font-black text-white">
+                                    {analysis.affectedHoldings.length > 0
+                                      ? analysis.affectedHoldings.join(", ")
+                                      : "NONE"}
+                                  </span>
                                 </div>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </button>
+
+                              <div className="border-t border-zinc-700 pt-2">
+                                <span className="text-[7px] text-zinc-500 uppercase block mb-1">RECOMMENDATION</span>
+                                <p className="text-xs text-white leading-relaxed">
+                                  {analysis.recommendation}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {/* Full Article Content */}

@@ -9,25 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { fetchAllPrices } from "@/lib/uphold-api";
 import { getAvailableSymbols } from "@/lib/coinCatalog";
-
-type WalletCoin = string;
-
-const EPSILON = 1e-10;
-
-const SYMBOL_ALIASES: Record<string, string> = {
-  XBT: "BTC",
-};
-
-function normalizeWalletSymbol(input: unknown): WalletCoin {
-  const raw = String(input || "")
-    .trim()
-    .toUpperCase();
-  if (!raw) return "";
-
-  const base = raw.replace("/", "-").split("-")[0].trim();
-
-  return SYMBOL_ALIASES[base] || base;
-}
+import { EPSILON, normalizeWalletSymbol } from "@/lib/wallet-utils";
 
 export async function POST(req: Request) {
   try {
