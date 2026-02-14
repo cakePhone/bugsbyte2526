@@ -1,0 +1,21 @@
+FROM node:20-bookworm-slim
+
+# Install OpenSSL and clean up to keep the image slim
+RUN apt-get update -y && \
+    apt-get install -y openssl libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+RUN npm install
+
+# Copy the rest of the project into /app (this may be bind-mounted at runtime)
+COPY . .
+
+RUN npx prisma generate
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma db push && npm run dev"]
