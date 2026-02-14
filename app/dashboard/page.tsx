@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import ClientBackground from "@/app/components/ClientBackground";
 import TheBulletin from "@/components/dashboard/TheBulletin";
 import ThreatRadar from "@/components/dashboard/ThreatRadar";
 import { FatalEventLine } from "@/components/dashboard/ActionOverlay";
@@ -115,8 +116,10 @@ export default function WarRoom() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-        <div className="text-gray-500 font-mono text-sm">
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center relative">
+        <ClientBackground />
+        <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
+        <div className="text-gray-500 font-mono text-sm relative z-10">
           LOADING PROFILE...
         </div>
       </div>
@@ -124,8 +127,14 @@ export default function WarRoom() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white font-mono">
-      <header className="border-b-4 border-white bg-black sticky top-0 z-40">
+    <div className="min-h-screen bg-[#121212] text-white font-mono relative">
+      {/* Interactive PixelBlast Background */}
+      <ClientBackground />
+      
+      {/* Dark Overlay for 30% more darkness */}
+      <div className="fixed inset-0 bg-black/30 pointer-events-none z-0" />
+      
+      <header className="border-b-4 border-white bg-black sticky top-0 z-40 relative">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-tighter text-white">
@@ -193,7 +202,7 @@ export default function WarRoom() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-4 space-y-4">
+      <main className="max-w-[1600px] mx-auto p-4 space-y-4 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <DashboardStatCard
             label="PORTFOLIO VALUE"
@@ -416,7 +425,7 @@ export default function WarRoom() {
         </div>
       </main>
 
-      <footer className="border-t-4 border-white bg-black mt-8">
+      <footer className="border-t-4 border-white bg-black mt-8 relative z-10">
         <div className="max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase text-gray-500">
             COFFEE DRIVEN DEVELOPMENT • BUGSBYTE 2026

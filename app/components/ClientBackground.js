@@ -4,13 +4,11 @@ import PixelBlast from "./PixelBlast";
 
 export default function ClientBackground() {
   return (
-    <div className="fixed top-0 left-0 w-full h-screen">
-      <div className="absolute inset-0 bg-gradient-to-b from-dark-gradient-start to-dark-gradient-end"></div>
-      <div className="absolute inset-0 parallax-bg"></div>
+    <div className="fixed top-0 left-0 w-full h-screen pointer-events-none z-0">
       <PixelBlast
         variant="circle"
         pixelSize={6}
-        color="#f00"
+        color="#FF0000"
         patternScale={7}
         patternDensity={0.8}
         pixelSizeJitter={0.5}
