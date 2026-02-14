@@ -12,9 +12,16 @@ import {
   type ISeriesApi,
   type Time,
 } from "lightweight-charts";
-import { useWarRoom, type TimeWindow, type ChartType } from "@/contexts/WarRoomContext";
+import {
+  useWarRoom,
+  type TimeWindow,
+  type ChartType,
+} from "@/contexts/WarRoomContext";
 import type { PricePoint } from "./types";
-import { SearchActionPopup, type SearchAction } from "@/components/SearchActionPopup";
+import {
+  SearchActionPopup,
+  type SearchAction,
+} from "@/components/SearchActionPopup";
 import { TradeModal, type TradeOrder } from "@/components/TradeModal";
 
 /**
@@ -35,7 +42,10 @@ interface SuperpositionedGraphProps {
   priceHistories: Record<string, PricePoint[]>;
   currentPrices: Record<string, number>;
   availableAssets: string[];
-  aiPredictions?: Record<string, { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }>;
+  aiPredictions?: Record<
+    string,
+    { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }
+  >;
   apiErrors?: Record<string, boolean>;
   purchasePrices?: Record<string, number>;
 }
@@ -73,15 +83,41 @@ function useGlobalAssetCatalog() {
       .catch(() => {
         if (!cancelled) {
           setAllAssets([
-            "BTC", "ETH", "XRP", "SOL", "ADA", "DOGE", "LTC", "AVAX",
-            "DOT", "MATIC", "LINK", "UNI", "ATOM", "FIL", "NEAR",
-            "APE", "SAND", "MANA", "AAVE", "CRV", "COMP", "MKR",
-            "SHIB", "ALGO", "FTM", "HBAR",
+            "BTC",
+            "ETH",
+            "XRP",
+            "SOL",
+            "ADA",
+            "DOGE",
+            "LTC",
+            "AVAX",
+            "DOT",
+            "MATIC",
+            "LINK",
+            "UNI",
+            "ATOM",
+            "FIL",
+            "NEAR",
+            "APE",
+            "SAND",
+            "MANA",
+            "AAVE",
+            "CRV",
+            "COMP",
+            "MKR",
+            "SHIB",
+            "ALGO",
+            "FTM",
+            "HBAR",
           ]);
         }
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return { allAssets, loading };
@@ -94,7 +130,10 @@ function useGlobalAssetCatalog() {
 function toLineData(points: PricePoint[]) {
   const cleaned = points
     .map((p) => ({ timestamp: Number(p.timestamp), price: Number(p.price) }))
-    .filter((p) => Number.isFinite(p.timestamp) && Number.isFinite(p.price) && p.price > 0)
+    .filter(
+      (p) =>
+        Number.isFinite(p.timestamp) && Number.isFinite(p.price) && p.price > 0,
+    )
     .sort((a, b) => a.timestamp - b.timestamp);
 
   // Deduplicate by timestamp (lightweight-charts requires unique timestamps)
@@ -102,7 +141,8 @@ function toLineData(points: PricePoint[]) {
   const deduped: { time: Time; value: number }[] = [];
   for (const p of cleaned) {
     // Convert ms -> seconds if needed
-    const ts = p.timestamp > 1e12 ? Math.floor(p.timestamp / 1000) : p.timestamp;
+    const ts =
+      p.timestamp > 1e12 ? Math.floor(p.timestamp / 1000) : p.timestamp;
     if (!seen.has(ts)) {
       seen.add(ts);
       deduped.push({ time: ts as Time, value: p.price });
@@ -162,7 +202,8 @@ export default function SuperpositionedGraph({
   const [chartTypeOpen, setChartTypeOpen] = useState(false);
 
   // Fetch the full catalog of coins from API
-  const { allAssets: globalAssets, loading: catalogLoading } = useGlobalAssetCatalog();
+  const { allAssets: globalAssets, loading: catalogLoading } =
+    useGlobalAssetCatalog();
 
   // Merge global + local assets for search (deduplicate)
   const searchableAssets = useMemo(() => {
@@ -293,7 +334,7 @@ export default function SuperpositionedGraph({
       chartRef.current = null;
       seriesMapRef.current.clear();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Chart created once
 
   // ===================================================================
@@ -339,7 +380,8 @@ export default function SuperpositionedGraph({
             topColor: layer.color + "33",
             bottomColor: layer.color + "05",
             lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle: layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+            lineStyle:
+              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
             crosshairMarkerVisible: true,
             crosshairMarkerRadius: 5,
             crosshairMarkerBorderColor: "#FFFFFF",
@@ -350,7 +392,8 @@ export default function SuperpositionedGraph({
           series = chart.addSeries(LineSeries, {
             color: layer.color,
             lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle: layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+            lineStyle:
+              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
             crosshairMarkerVisible: true,
             crosshairMarkerRadius: 5,
             crosshairMarkerBorderColor: "#FFFFFF",
@@ -403,22 +446,25 @@ export default function SuperpositionedGraph({
   // ===================================================================
   // SEARCH ACTIONS
   // ===================================================================
-  const handleSearchAction = useCallback((action: SearchAction, symbol: string) => {
-    switch (action) {
-      case "buy":
-        setTradeModal({ isOpen: true, symbol });
-        setSearchOpen(false);
-        break;
-      case "chart":
-        soloAsset(symbol);
-        setSearchOpen(false);
-        break;
-      case "merge":
-        superimposeAsset(symbol);
-        setSearchOpen(false);
-        break;
-    }
-  }, [soloAsset, superimposeAsset]);
+  const handleSearchAction = useCallback(
+    (action: SearchAction, symbol: string) => {
+      switch (action) {
+        case "buy":
+          setTradeModal({ isOpen: true, symbol });
+          setSearchOpen(false);
+          break;
+        case "chart":
+          soloAsset(symbol);
+          setSearchOpen(false);
+          break;
+        case "merge":
+          superimposeAsset(symbol);
+          setSearchOpen(false);
+          break;
+      }
+    },
+    [soloAsset, superimposeAsset],
+  );
 
   // ===================================================================
   // TRADE EXECUTION
@@ -443,7 +489,15 @@ export default function SuperpositionedGraph({
         alert("Sold " + order.quantity + " " + order.symbol);
         window.location.reload();
       } else {
-        alert("Buy order for " + order.quantity + " " + order.symbol + " at $" + (order.price?.toFixed(2) || "?") + " - Wallet integration in progress.");
+        alert(
+          "Buy order for " +
+            order.quantity +
+            " " +
+            order.symbol +
+            " at $" +
+            (order.price?.toFixed(2) || "?") +
+            " - Wallet integration in progress.",
+        );
       }
     } catch (error) {
       console.error("[TRADE] Error:", error);
@@ -454,15 +508,20 @@ export default function SuperpositionedGraph({
   // Determine if any layer has API error
   const hasApiError = state.layers.some((l) => apiErrors[l.symbol]);
   const layersWithNoData = state.layers.filter(
-    (l) => l.visible && (!priceHistories[l.symbol] || priceHistories[l.symbol].length < 2)
+    (l) =>
+      l.visible &&
+      (!priceHistories[l.symbol] || priceHistories[l.symbol].length < 2),
   );
   const hasVisibleData = state.layers.some(
-    (l) => l.visible && priceHistories[l.symbol]?.length >= 2
+    (l) => l.visible && priceHistories[l.symbol]?.length >= 2,
   );
 
   return (
     <div
-      className={"border-4 bg-black flex flex-col relative " + (hasApiError ? "border-[#FF0000] animate-pulse" : "border-white")}
+      className={
+        "border-4 bg-black flex flex-col relative " +
+        (hasApiError ? "border-[#FF0000] animate-pulse" : "border-white")
+      }
     >
       {/* === Top Bar: Asset Context === */}
       <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
@@ -470,7 +529,7 @@ export default function SuperpositionedGraph({
           {/* Add Layer Button */}
           <button
             onClick={() => setSearchOpen(true)}
-            className="border-4 border-white bg-black text-white px-3 py-1 text-sm font-black font-mono hover:bg-[#FF0000] hover:border-[#FF0000] transition-colors"
+            className="border-4 border-white bg-black text-white aspect-square w-8 text-sm font-black font-mono hover:bg-[#FF0000] hover:border-[#FF0000] transition-colors"
             title="SUPERIMPOSE NEW ASSET"
           >
             +
@@ -479,32 +538,43 @@ export default function SuperpositionedGraph({
           {/* Layer Tabs */}
           <div className="flex items-center gap-1 flex-wrap">
             {state.layers.map((layer) => {
-              const isSuperimposed = !layer.isPrimary && state.layers.length > 1;
+              const isSuperimposed =
+                !layer.isPrimary && state.layers.length > 1;
 
               return (
                 <div
                   key={layer.id}
-                  className={"flex items-center gap-2 border-4 px-3 py-1 min-w-[80px] cursor-pointer transition-colors select-none group " + (
-                    layer.isPrimary
+                  className={
+                    "flex items-center gap-2 border-4 px-3 py-1 min-w-[80px] cursor-pointer transition-colors select-none group " +
+                    (layer.isPrimary
                       ? "border-white bg-white text-black"
                       : isSuperimposed
                         ? "text-white hover:opacity-80"
                         : apiErrors[layer.symbol]
                           ? "border-[#FF0000] text-[#FF0000]"
-                          : "border-gray-600 text-gray-400 hover:border-white hover:text-white"
-                  )}
+                          : "border-gray-600 text-gray-400 hover:border-white hover:text-white")
+                  }
                   style={{
-                    borderColor: !layer.isPrimary && isSuperimposed ? layer.color : undefined,
+                    borderColor:
+                      !layer.isPrimary && isSuperimposed
+                        ? layer.color
+                        : undefined,
                   }}
                   onClick={() => {
                     if (!layer.isPrimary) setPrimaryLayer(layer.id);
                   }}
-                  title={layer.isPrimary ? "PRIMARY LAYER" : "CLICK TO SET " + layer.symbol + " AS PRIMARY"}
+                  title={
+                    layer.isPrimary
+                      ? "PRIMARY LAYER"
+                      : "CLICK TO SET " + layer.symbol + " AS PRIMARY"
+                  }
                 >
                   <div
                     className="w-3 h-3 border-2"
                     style={{
-                      backgroundColor: layer.visible ? layer.color : "transparent",
+                      backgroundColor: layer.visible
+                        ? layer.color
+                        : "transparent",
                       borderColor: layer.isPrimary ? "#000" : layer.color,
                     }}
                   />
@@ -517,9 +587,12 @@ export default function SuperpositionedGraph({
                         e.stopPropagation();
                         removeLayer(layer.id);
                       }}
-                      className={"ml-1 text-[10px] font-black font-mono hover:text-[#FF0000] transition-colors " + (
-                        layer.isPrimary ? "text-black/60 hover:text-[#FF0000]" : "text-gray-500"
-                      )}
+                      className={
+                        "ml-1 text-[10px] font-black font-mono hover:text-[#FF0000] transition-colors " +
+                        (layer.isPrimary
+                          ? "text-black/60 hover:text-[#FF0000]"
+                          : "text-gray-500")
+                      }
                       title={"REMOVE " + layer.symbol}
                     >
                       x
@@ -545,7 +618,9 @@ export default function SuperpositionedGraph({
               onClick={() => setChartTypeOpen(!chartTypeOpen)}
               className="border-4 border-white bg-black px-3 py-1 text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-gray-900 transition-colors flex items-center gap-2"
             >
-              <span>{CHART_TYPES.find((c) => c.key === state.chartType)?.icon}</span>
+              <span>
+                {CHART_TYPES.find((c) => c.key === state.chartType)?.icon}
+              </span>
               <span>{state.chartType}</span>
               <span className="text-[8px] text-gray-500">&#9660;</span>
             </button>
@@ -564,11 +639,12 @@ export default function SuperpositionedGraph({
                         setChartType(ct.key);
                         setChartTypeOpen(false);
                       }}
-                      className={"w-full px-4 py-2 text-xs font-black font-mono uppercase flex items-center gap-2 transition-colors " + (
-                        state.chartType === ct.key
+                      className={
+                        "w-full px-4 py-2 text-xs font-black font-mono uppercase flex items-center gap-2 transition-colors " +
+                        (state.chartType === ct.key
                           ? "bg-white text-black"
-                          : "text-gray-400 hover:bg-gray-900 hover:text-white"
-                      )}
+                          : "text-gray-400 hover:bg-gray-900 hover:text-white")
+                      }
                     >
                       <span>{ct.icon}</span>
                       <span>{ct.label}</span>
@@ -582,28 +658,31 @@ export default function SuperpositionedGraph({
 
         {/* Signal Lost Overlay */}
         <AnimatePresence>
-          {layersWithNoData.length > 0 && state.layers.length > 0 && !hasVisibleData && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80"
-            >
+          {layersWithNoData.length > 0 &&
+            state.layers.length > 0 &&
+            !hasVisibleData && (
               <motion.div
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ repeat: Infinity, duration: 1.2 }}
-                className="text-[#FF0000] font-black font-mono text-xl uppercase tracking-widest mb-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80"
               >
-                SIGNAL LOST
+                <motion.div
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.2 }}
+                  className="text-[#FF0000] font-black font-mono text-xl uppercase tracking-widest mb-2"
+                >
+                  SIGNAL LOST
+                </motion.div>
+                <div className="text-gray-500 font-mono text-xs uppercase tracking-widest">
+                  RECONNECTING TO DATA FEED...
+                </div>
+                <div className="mt-4 text-[10px] font-mono text-gray-600">
+                  {layersWithNoData.map((l) => l.symbol).join(" / ")} — NO
+                  STREAM
+                </div>
               </motion.div>
-              <div className="text-gray-500 font-mono text-xs uppercase tracking-widest">
-                RECONNECTING TO DATA FEED...
-              </div>
-              <div className="mt-4 text-[10px] font-mono text-gray-600">
-                {layersWithNoData.map((l) => l.symbol).join(" / ")} — NO STREAM
-              </div>
-            </motion.div>
-          )}
+            )}
         </AnimatePresence>
 
         {/* Empty state */}
@@ -652,11 +731,12 @@ export default function SuperpositionedGraph({
                   chartRef.current?.timeScale().fitContent();
                 }, 100);
               }}
-              className={"border-4 px-3 py-1 text-xs font-black font-mono uppercase tracking-widest transition-colors " + (
-                state.timeWindow === tw.key
+              className={
+                "border-4 px-3 py-1 text-xs font-black font-mono uppercase tracking-widest transition-colors " +
+                (state.timeWindow === tw.key
                   ? "border-white bg-white text-black"
-                  : "border-gray-700 text-gray-500 hover:border-white hover:text-white"
-              )}
+                  : "border-gray-700 text-gray-500 hover:border-white hover:text-white")
+              }
             >
               {tw.label}
             </button>
@@ -706,7 +786,9 @@ export default function SuperpositionedGraph({
                   className="w-full bg-black border-4 border-white text-white font-mono font-bold text-sm px-4 py-3 placeholder:text-gray-600 focus:outline-none focus:border-[#FF0000] transition-colors uppercase tracking-wider"
                 />
                 <div className="text-[8px] font-mono text-gray-600 mt-1 uppercase tracking-widest">
-                  {catalogLoading ? "LOADING FULL CATALOG..." : searchableAssets.length + " SUPPORTED ASSETS"}
+                  {catalogLoading
+                    ? "LOADING FULL CATALOG..."
+                    : searchableAssets.length + " SUPPORTED ASSETS"}
                   {" \u2022 SCOPE: ALL EXCHANGES"}
                 </div>
               </div>
@@ -715,7 +797,9 @@ export default function SuperpositionedGraph({
               <div className="max-h-[300px] overflow-y-auto border-t-4 border-white">
                 {filteredAssets.length === 0 ? (
                   <div className="px-4 py-6 text-xs font-mono text-gray-600 uppercase text-center">
-                    {searchQuery ? "NO MATCHING ASSETS FOUND" : "ALL ASSETS ARE ALREADY ON RADAR"}
+                    {searchQuery
+                      ? "NO MATCHING ASSETS FOUND"
+                      : "ALL ASSETS ARE ALREADY ON RADAR"}
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-0">
@@ -723,7 +807,9 @@ export default function SuperpositionedGraph({
                       <button
                         key={asset}
                         onClick={(e) => {
-                          const rect = (e.target as HTMLElement).getBoundingClientRect();
+                          const rect = (
+                            e.target as HTMLElement
+                          ).getBoundingClientRect();
                           setActionPopup({
                             isOpen: true,
                             symbol: asset,

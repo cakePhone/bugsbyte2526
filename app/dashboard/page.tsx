@@ -36,11 +36,46 @@ const TIME_WINDOW_MAP: Record<TimeWindow, ChartTimeframe> = {
  * Excludes stablecoins and tokens without reliable OHLC data.
  */
 const SUPPORTED_CHART_SYMBOLS = new Set([
-  "BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "DOT", 
-  "LINK", "MATIC", "UNI", "ATOM", "LTC", "BCH", "XLM", "ALGO",
-  "NEAR", "ICP", "FIL", "VET", "HBAR", "EOS", "AAVE", "GRT",
-  "SAND", "MANA", "AXS", "ENJ", "CRV", "COMP", "MKR", "SNX",
-  "SUSHI", "YFI", "BAT", "ZRX", "1INCH", "ANKR", "CHZ", "GALA",
+  "BTC",
+  "ETH",
+  "XRP",
+  "SOL",
+  "DOGE",
+  "ADA",
+  "AVAX",
+  "DOT",
+  "LINK",
+  "MATIC",
+  "UNI",
+  "ATOM",
+  "LTC",
+  "BCH",
+  "XLM",
+  "ALGO",
+  "NEAR",
+  "ICP",
+  "FIL",
+  "VET",
+  "HBAR",
+  "EOS",
+  "AAVE",
+  "GRT",
+  "SAND",
+  "MANA",
+  "AXS",
+  "ENJ",
+  "CRV",
+  "COMP",
+  "MKR",
+  "SNX",
+  "SUSHI",
+  "YFI",
+  "BAT",
+  "ZRX",
+  "1INCH",
+  "ANKR",
+  "CHZ",
+  "GALA",
 ]);
 
 /** Filter available coins to only those with working chart data */
@@ -68,7 +103,7 @@ function WarRoomContent() {
   // Filter to only coins with working chart data
   const chartableCoins = useMemo(
     () => filterChartableCoins(availableCoins),
-    [availableCoins]
+    [availableCoins],
   );
 
   const { analyses, isLoading, scanCount } = useNewsAnalysis({
@@ -270,9 +305,9 @@ function WarRoomContent() {
   }
 
   return (
-    <>
+    <div className="flex-1 flex h-full">
       {/* Left Sidebar - Tactical Holdings (25% width) */}
-      <div className="w-1/4 min-w-[280px] max-w-[400px] h-[calc(100vh-96px)]">
+      <div className="w-1/4 min-w-[280px] max-w-[400px]">
         <TacticalHoldings
           holdings={holdings}
           balanceUsdt={balanceUsdt}
@@ -287,7 +322,7 @@ function WarRoomContent() {
       </div>
 
       {/* Main Content Area (75% width) */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-y-auto h-[calc(100vh-96px)]">
+      <div className="flex flex-col p-4 gap-4 w-full h-full">
         {/* Superpositioned Graph Viewer - shrinks when exchange bar expands */}
         <div className="flex-1 min-h-[350px]" id="graph-viewer">
           <SuperpositionedGraph
@@ -301,16 +336,14 @@ function WarRoomContent() {
         </div>
 
         {/* Intelligence Exchange Bar - fixed at bottom, doesn't overlap chart */}
-        <div id="intelligence-exchange" className="flex-shrink-0">
-          <IntelligenceExchangeBar
-            quotes={exchangeQuotes}
-            isLoading={chartLoading || arbitrageLoading}
-            apiFailed={Object.values(apiErrors).some(Boolean)}
-            onExecuteTrade={handleBuyRequest}
-          />
-        </div>
+        <IntelligenceExchangeBar
+          quotes={exchangeQuotes}
+          isLoading={chartLoading || arbitrageLoading}
+          apiFailed={Object.values(apiErrors).some(Boolean)}
+          onExecuteTrade={handleBuyRequest}
+        />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -319,11 +352,11 @@ function WarRoomWrapper() {
   const router = useRouter();
 
   const { profile, holdings, availableCoins } = useDashboardData(router);
-  
+
   // Filter to only coins with working chart data
   const chartableCoins = useMemo(
     () => filterChartableCoins(availableCoins),
-    [availableCoins]
+    [availableCoins],
   );
 
   const { isLoading, scanCount } = useNewsAnalysis({
