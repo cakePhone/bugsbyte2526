@@ -15,14 +15,6 @@ export type ChartTimeframe =
   | "30D"
   | "1Y";
 
-export interface HoldingsTradeRequest {
-  symbol: string;
-  recommendedAction: "BUY" | "SELL" | "HOLD" | "REBALANCE";
-  recommendedAmount: number;
-  recommendedFromSymbol: string;
-  reason: string;
-}
-
 export interface ChartTimeframeOption {
   key: ChartTimeframe;
   label: string;

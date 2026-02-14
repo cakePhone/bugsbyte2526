@@ -9,40 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { fetchAllPrices } from "@/lib/uphold-api";
 import { getAvailableSymbols } from "@/lib/coinCatalog";
-
-type WalletCoin = string;
-
-const EPSILON = 1e-10;
-
-const SYMBOL_ALIASES: Record<string, string> = {
-  XBT: "BTC",
-};
-
-function normalizeWalletSymbol(input: unknown): WalletCoin {
-  const raw = String(input || "")
-    .trim()
-    .toUpperCase();
-  if (!raw) return "";
-
-  const base = raw.replace("/", "-").split("-")[0].trim();
-
-  return SYMBOL_ALIASES[base] || base;
-}
-
-function normalizeAssetBalances(input: unknown): Record<string, number> {
-  if (!input || typeof input !== "object") return {};
-
-  return Object.entries(input as Record<string, unknown>).reduce(
-    (acc, [key, value]) => {
-      const symbol = normalizeWalletSymbol(key);
-      const amount = Number(value);
-      if (!symbol || !Number.isFinite(amount) || amount <= 0) return acc;
-      acc[symbol] = (acc[symbol] || 0) + amount;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-}
+import { EPSILON, normalizeWalletSymbol, normalizeAssetBalances } from "@/lib/wallet-utils";
 
 export async function POST(req: Request) {
   try {

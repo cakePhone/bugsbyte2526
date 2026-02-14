@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWarRoom } from "@/contexts/WarRoomContext";
 
@@ -137,19 +138,19 @@ export default function CommandHeader({ scanCount = 0, isScanning = false, avail
         </div>
 
         {/* Navigation Nodes - Right */}
-        <nav className="flex items-center h-full">
-          <button
-            onClick={() => router.push("/settings")}
-            className="h-full border-r-4 border-white px-4 text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
+        <nav className="flex items-center h-full border-l-4 border-white">
+          <Link
+            href="/settings"
+            className="h-full border-r-4 border-white px-4 flex items-center text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
           >
             [ BASE OF OPERATIONS ]
-          </button>
-          <button
-            onClick={() => router.push("/news")}
-            className="h-full px-4 text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
+          </Link>
+          <Link
+            href="/news"
+            className="h-full px-4 flex items-center text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
           >
             [ NEWS ]
-          </button>
+          </Link>
         </nav>
       </div>
     </header>

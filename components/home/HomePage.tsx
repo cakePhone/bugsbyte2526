@@ -218,7 +218,7 @@ export default function HomePage({
           <div className="marquee-container">
             <div className="marquee-content">
               {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
-                <span key={index} className="mx-8 text-sm tracking-widest text-gray-400">
+                <span key={`${item}-${index}`} className="mx-8 text-sm tracking-widest text-gray-400">
                   {item}
                   <span className="mx-4 text-[#FF0000]">•</span>
                 </span>
