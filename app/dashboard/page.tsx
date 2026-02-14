@@ -16,6 +16,7 @@ import ThreatRadar from '@/components/dashboard/ThreatRadar';
 import ActionOverlay, { FatalEventLine } from '@/components/dashboard/ActionOverlay';
 import type { NewsAnalysis } from '@/app/api/news/analyze/route';
 import type { RiskProfile } from '@/components/onboarding/TheInterrogation';
+import { calculateNetProfit } from '@/lib/market-aggregator/netProfit';
 
 // ── Types ─────────────────────────────────────────────────
 interface PricePoint { timestamp: number; price: number }
@@ -328,7 +329,7 @@ export default function WarRoom() {
 
           {/* Article Detail */}
           <div className="col-span-12 lg:col-span-4">
-            <ArticleDetail article={selectedArticle} profile={profile} />
+            <ArticleDetail article={selectedArticle} profile={profile} prices={prices} />
           </div>
 
           {/* Holdings / Wallet */}
@@ -509,7 +510,7 @@ function PriceChartSVG({ history, symbol }: { history: PricePoint[]; symbol: str
 }
 
 // ── Article Detail Panel ──────────────────────────────────
-function ArticleDetail({ article, profile }: { article: NewsAnalysis | null; profile: RiskProfile }) {
+function ArticleDetail({ article, profile, prices }: { article: NewsAnalysis | null; profile: RiskProfile; prices: Record<string, number> }) {
   if (!article) {
     return (
       <div className="border-4 border-white bg-black h-full flex items-center justify-center p-8">
@@ -595,6 +596,52 @@ function ArticleDetail({ article, profile }: { article: NewsAnalysis | null; pro
             ))}
           </div>
         </div>
+
+        {/* Potential Net Profit */}
+        {article.affected_assets.length > 0 && (() => {
+          const sym = article.affected_assets[0];
+          const price = prices[sym];
+          if (!price) return null;
+          // Simulate a second-exchange price with a small drift
+          const drift = (Math.random() - 0.5) * 0.008 * price;
+          const altPrice = price + drift;
+          const result = calculateNetProfit({ priceA: price, priceB: altPrice });
+          return (
+            <div className={`border-2 p-3 ${result.shouldTrade ? 'border-green-600 bg-green-950' : 'border-gray-700 bg-gray-950'}`}>
+              <div className="text-[10px] font-bold mb-2 uppercase" style={{ color: result.shouldTrade ? '#22c55e' : '#ef4444' }}>
+                POTENTIAL NET PROFIT — {sym}
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-[9px] text-gray-500">RAW SPREAD</div>
+                  <div className="text-sm font-bold text-white">${result.rawSpread.toLocaleString()}</div>
+                  <div className="text-[9px] text-gray-500">{result.rawSpreadPct.toFixed(3)}%</div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-gray-500">FEES + SLIP</div>
+                  <div className="text-sm font-bold text-[#FF6666]">-${result.totalCost.toLocaleString()}</div>
+                  <div className="text-[9px] text-gray-500">{result.totalCostPct.toFixed(3)}%</div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-gray-500">NET P&L</div>
+                  <div className={`text-sm font-bold ${result.netProfit > 0 ? 'text-green-400' : 'text-[#FF0000]'}`}>
+                    {result.netProfit > 0 ? '+' : ''}${result.netProfit.toLocaleString()}
+                  </div>
+                  <div className="text-[9px] text-gray-500">{result.netProfitPct.toFixed(3)}%</div>
+                </div>
+              </div>
+              <div className="mt-2 text-center">
+                <span className={`text-[10px] font-black px-2 py-0.5 border-2 ${
+                  result.shouldTrade
+                    ? 'border-green-500 text-green-400'
+                    : 'border-[#FF0000] text-[#FF0000]'
+                }`}>
+                  {result.shouldTrade ? '✓ TRADE VIABLE' : '✗ NOT PROFITABLE'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Source */}
         <div className="text-[10px] text-gray-600">
