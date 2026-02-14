@@ -97,6 +97,7 @@ export default function SuperpositionedGraph({
     state,
     addLayer,
     removeLayer,
+    setPrimaryLayer,
     setTimeWindow,
     setPortal,
     soloAsset,
@@ -175,6 +176,7 @@ export default function SuperpositionedGraph({
   );
 
   // Calculate normalized data for all layers
+  // Each layer stores its own time bounds for proper superimposition
   const normalizedData = activeLayers.map((layer) => {
     const points = priceHistories[layer.symbol] || [];
     const cleaned = points
@@ -182,7 +184,7 @@ export default function SuperpositionedGraph({
       .filter((p) => Number.isFinite(p.timestamp) && Number.isFinite(p.price) && p.price > 0)
       .sort((a, b) => a.timestamp - b.timestamp);
 
-    if (cleaned.length < 2) return { layer, points: [], normalized: [] };
+    if (cleaned.length < 2) return { layer, points: [], normalized: [], startTs: 0, endTs: 1, tsRange: 1 };
 
     const baseline = cleaned[0].price;
     const normalized = cleaned.map((p) => ({
@@ -191,7 +193,19 @@ export default function SuperpositionedGraph({
       price: p.price,
     }));
 
-    return { layer, points: cleaned, normalized };
+    // Store this layer's own time bounds
+    const layerStartTs = Math.min(...cleaned.map((p) => p.timestamp));
+    const layerEndTs = Math.max(...cleaned.map((p) => p.timestamp));
+    const layerTsRange = layerEndTs - layerStartTs || 1;
+
+    return { 
+      layer, 
+      points: cleaned, 
+      normalized,
+      startTs: layerStartTs,
+      endTs: layerEndTs,
+      tsRange: layerTsRange,
+    };
   }).filter((d) => d.normalized.length >= 2);
 
   // Calculate global bounds
@@ -200,9 +214,10 @@ export default function SuperpositionedGraph({
   const maxPct = allNormalized.length > 0 ? Math.max(...allNormalized, 0.1) : 5;
   const range = maxPct - minPct || 1;
 
-  const allTimestamps = normalizedData.flatMap((d) => d.points.map((p) => p.timestamp));
-  const rawStartTs = allTimestamps.length > 0 ? Math.min(...allTimestamps) : Date.now() - 86400000;
-  const rawEndTs = allTimestamps.length > 0 ? Math.max(...allTimestamps) : Date.now();
+  // Use PRIMARY layer's time range for X-axis display (other layers normalize to fit)
+  const primaryData = normalizedData.find((d) => d.layer.isPrimary) || normalizedData[0];
+  const rawStartTs = primaryData?.startTs ?? Date.now() - 86400000;
+  const rawEndTs = primaryData?.endTs ?? Date.now();
   const rawTsRange = rawEndTs - rawStartTs || 1;
 
   // Apply zoom to time range
@@ -211,26 +226,6 @@ export default function SuperpositionedGraph({
   const startTs = centerTs - zoomedTsRange / 2;
   const endTs = centerTs + zoomedTsRange / 2;
   const tsRange = endTs - startTs || 1;
-
-  // Handle scroll zoom on X-axis
-  const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    // Calculate zoom center based on mouse position
-    const mouseX = e.clientX - rect.left;
-    const normalizedX = mouseX / rect.width;
-    
-    // Zoom in on scroll up, out on scroll down
-    const zoomDelta = e.deltaY < 0 ? 1.15 : 0.85;
-    const newZoom = Math.max(0.25, Math.min(10, zoomLevel * zoomDelta));
-    
-    // Update zoom center to follow mouse
-    setZoomCenter(Math.max(0.1, Math.min(0.9, normalizedX)));
-    setZoomLevel(newZoom);
-  }, [zoomLevel]);
 
   // Reset zoom on double-click
   const handleDoubleClick = useCallback(() => {
@@ -327,9 +322,16 @@ export default function SuperpositionedGraph({
   }, []);
 
   // Generate strict geometric polyline (no curves!)
-  const generatePath = (normalized: { timestamp: number; value: number }[]) => {
+  // Each layer uses its OWN time range for X-axis normalization (superimposition alignment)
+  const generatePath = (
+    normalized: { timestamp: number; value: number }[],
+    layerStartTs: number,
+    layerTsRange: number
+  ) => {
     return normalized.map((p) => {
-      const x = padding + ((p.timestamp - startTs) / tsRange) * (width - 2 * padding);
+      // Normalize X to 0-1 using THIS layer's time range, then map to chart width
+      const normalizedX = (p.timestamp - layerStartTs) / layerTsRange;
+      const x = padding + normalizedX * (width - 2 * padding);
       const y = padding + (1 - (p.value - minPct) / range) * (height - 2 * padding);
       return `${x},${y}`;
     }).join(" ");
@@ -351,7 +353,7 @@ export default function SuperpositionedGraph({
             +
           </button>
 
-          {/* Layer Tabs — LEFT-CLICK = REMOVE LAYER (V4) */}
+          {/* Layer Tabs — CLICK = SET PRIMARY, X = REMOVE */}
           <div className="flex items-center gap-1 flex-wrap">
             {state.layers.map((layer) => {
               const isSolo = layer.isPrimary && state.layers.length === 1;
@@ -360,7 +362,7 @@ export default function SuperpositionedGraph({
               return (
                 <div
                   key={layer.id}
-                  className={`flex items-center gap-2 border-4 px-4 py-1 min-w-[100px] cursor-pointer transition-colors select-none group ${
+                  className={`flex items-center gap-2 border-4 px-3 py-1 min-w-[80px] cursor-pointer transition-colors select-none group ${
                     layer.isPrimary
                       ? "border-white bg-white text-black"
                       : isSuperimposed
@@ -373,12 +375,12 @@ export default function SuperpositionedGraph({
                     borderColor: !layer.isPrimary && isSuperimposed ? layer.color : undefined,
                   }}
                   onClick={() => {
-                    // Left-click = REMOVE this layer entirely
-                    if (state.layers.length > 1) {
-                      removeLayer(layer.id);
+                    // Click = Make this layer PRIMARY (white solid line)
+                    if (!layer.isPrimary) {
+                      setPrimaryLayer(layer.id);
                     }
                   }}
-                  title={state.layers.length > 1 ? `CLICK TO REMOVE ${layer.symbol}` : "CANNOT REMOVE LAST LAYER"}
+                  title={layer.isPrimary ? "PRIMARY LAYER" : `CLICK TO SET ${layer.symbol} AS PRIMARY`}
                 >
                   <div
                     className="w-3 h-3 border-2"
@@ -390,11 +392,20 @@ export default function SuperpositionedGraph({
                   <span className="text-[11px] font-black font-mono uppercase tracking-wider">
                     {layer.symbol}
                   </span>
-                  {isSolo && (
-                    <span className="text-[7px] font-mono opacity-60">SOLO</span>
-                  )}
-                  {isSuperimposed && (
-                    <span className="text-[7px] font-mono opacity-60">×</span>
+                  {/* X button to remove layer */}
+                  {state.layers.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeLayer(layer.id);
+                      }}
+                      className={`ml-1 text-[10px] font-black font-mono hover:text-[#FF0000] transition-colors ${
+                        layer.isPrimary ? "text-black/60 hover:text-[#FF0000]" : "text-gray-500"
+                      }`}
+                      title={`REMOVE ${layer.symbol}`}
+                    >
+                      ×
+                    </button>
                   )}
                 </div>
               );
@@ -511,11 +522,9 @@ export default function SuperpositionedGraph({
             preserveAspectRatio="xMidYMid meet"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            onWheel={handleWheel}
             onDoubleClick={handleDoubleClick}
             className="cursor-crosshair"
             shapeRendering="crispEdges"
-            style={{ touchAction: "none" }}
           >
             {/* Grid Lines — Industrial aesthetic */}
             {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
@@ -566,8 +575,8 @@ export default function SuperpositionedGraph({
             {/* Render layers in z-index order (lowest first) */}
             {normalizedData
               .sort((a, b) => a.layer.zIndex - b.layer.zIndex)
-              .map(({ layer, normalized, points }) => {
-                const path = generatePath(normalized);
+              .map(({ layer, normalized, points, startTs: layerStartTs, tsRange: layerTsRange }) => {
+                const path = generatePath(normalized, layerStartTs, layerTsRange);
                 const latest = points.at(-1)?.price ?? currentPrices[layer.symbol] ?? 0;
                 const first = points[0]?.price ?? latest;
                 const deltaPct = first > 0 ? ((latest - first) / first) * 100 : 0;

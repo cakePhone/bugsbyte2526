@@ -17,6 +17,7 @@ import AmountPromptModal from "./AmountPromptModal";
 
 interface TacticalHoldingsProps {
   holdings: Record<string, number>;
+  balanceUsdt?: number;
   prices: Record<string, number>;
   holdingValuesUsdt: Record<string, number>;
   holdingValuesDisplay: Record<string, number>;
@@ -30,6 +31,7 @@ interface TacticalHoldingsProps {
 
 export default function TacticalHoldings({
   holdings,
+  balanceUsdt = 0,
   prices,
   holdingValuesUsdt,
   holdingValuesDisplay,
@@ -167,13 +169,47 @@ export default function TacticalHoldings({
     onPlanRequest?.(sym);
   };
 
+  const [isResetting, setIsResetting] = useState(false);
+
+  // Reset wallet to initial state
+  const handleResetWallet = async () => {
+    if (isResetting) return;
+    if (!confirm("Reset wallet to $10,000 USDT? All holdings will be cleared.")) return;
+    
+    try {
+      setIsResetting(true);
+      const res = await fetch("/api/user/wallets/reset", {
+        method: "POST",
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Reset failed");
+      }
+      
+      window.location.reload();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to reset wallet");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <aside className="w-full h-full border-r-4 border-white bg-black flex flex-col">
       {/* Header */}
-      <div className="border-b-4 border-white px-4 py-3">
+      <div className="border-b-4 border-white px-4 py-3 flex items-center justify-between">
         <h2 className="text-sm font-black font-mono uppercase tracking-widest text-white">
           TACTICAL HOLDINGS
         </h2>
+        <button
+          onClick={handleResetWallet}
+          disabled={isResetting}
+          className="text-[8px] font-black font-mono text-gray-500 hover:text-[#FF0000] border border-gray-700 hover:border-[#FF0000] px-2 py-1 transition-colors disabled:opacity-50"
+          title="Reset wallet to $10,000 USDT"
+        >
+          {isResetting ? "..." : "RESET"}
+        </button>
       </div>
 
       {/* Total Value */}
@@ -186,6 +222,23 @@ export default function TacticalHoldings({
         </div>
         <div className="text-[10px] font-mono text-gray-600 mt-1">
           {entries.length} ACTIVE POSITIONS
+        </div>
+      </div>
+
+      {/* Free Funds (USDT Balance) */}
+      <div className="border-b-4 border-white px-4 py-3 bg-black">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[9px] font-black font-mono text-gray-500 uppercase tracking-widest">
+              FREE FUNDS
+            </div>
+            <div className="text-lg font-black font-mono text-[#00FF88] mt-0.5">
+              ${balanceUsdt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div className="text-[8px] font-mono text-gray-600 uppercase">
+            USDT
+          </div>
         </div>
       </div>
 

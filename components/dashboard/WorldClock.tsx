@@ -108,7 +108,7 @@ export default function WorldClock({ position = "right" }: WorldClockProps) {
         <span className={`w-2 h-2 ${isOpen ? "bg-[#FF0000]" : "bg-emerald-500"} animate-pulse`} />
         
         {/* Time Display */}
-        <span className="text-xs font-mono font-black text-white tracking-wider">
+        <span className="text-xs font-mono font-black text-white tracking-wider" suppressHydrationWarning>
           {formatTime(warRoomTime)}
         </span>
         
@@ -145,7 +145,7 @@ export default function WorldClock({ position = "right" }: WorldClockProps) {
                   <span className="text-[9px] font-black text-white uppercase tracking-widest">
                     WORLD CLOCK
                   </span>
-                  <span className="text-[7px] text-zinc-500">
+                  <span className="text-[7px] text-zinc-500" suppressHydrationWarning>
                     {formatDate(warRoomTime)}
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export default function WorldClock({ position = "right" }: WorldClockProps) {
                       </div>
                       <span className={`text-sm font-mono font-black ${
                         isWarRoom ? "text-[#FF0000]" : "text-white"
-                      }`}>
+                      }`} suppressHydrationWarning>
                         {formatTime(zoneTime)}
                       </span>
                     </div>

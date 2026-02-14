@@ -154,22 +154,32 @@ export async function POST(req: Request) {
         }
       }
 
+      // Only deduct from wallet.assets if NOT using coinWallets
+      // Otherwise we'd double-deduct (once from coinWallet, once from assets)
       const nextAssets = { ...assets };
-      const nextAssetAmount = Math.max(0, holdingsFromAssets - amountCoin);
-      if (nextAssetAmount <= EPSILON) {
-        delete nextAssets[symbol];
-      } else {
-        nextAssets[symbol] = nextAssetAmount;
+      if (!useCoinWallets) {
+        const nextAssetAmount = Math.max(0, holdingsFromAssets - amountCoin);
+        if (nextAssetAmount <= EPSILON) {
+          delete nextAssets[symbol];
+        } else {
+          nextAssets[symbol] = nextAssetAmount;
+        }
       }
 
       const grossValue = amountCoin * current.price;
+      
+      // Update wallet: set assets AND add USDT to balanceUsdt
       const nextWallet = await tx.wallet.update({
         where: { userId: session.sub },
         data: {
           assets: nextAssets,
+          balanceUsdt: {
+            increment: grossValue,
+          },
         },
       });
 
+      // Also update USDT coinWallet for consistency
       const existingUsdtWallet = await db.coinWallet.findFirst({
         where: { userId: session.sub, symbol: "USDT" },
         orderBy: { createdAt: "asc" },

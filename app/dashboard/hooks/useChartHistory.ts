@@ -102,6 +102,10 @@ function applyTimeframeWindow(
   return points.slice(-Math.min(points.length, 120));
 }
 
+// In-memory cache for timeframe data to avoid refetching when switching
+const timeframeCacheRef: { current: Record<string, { data: PricePoint[]; fetchedAt: number }> } = { current: {} };
+const CACHE_TTL_MS = 60_000; // Cache valid for 1 minute
+
 export default function useChartHistory({
   authChecked,
   selectedChartSymbols,
@@ -135,9 +139,17 @@ export default function useChartHistory({
   );
 
   const fetchHistory = useCallback(
-    async (symbol: string, timeframe: ChartTimeframe) => {
+    async (symbol: string, timeframe: ChartTimeframe, forceRefresh = false) => {
       const tf = TIMEFRAME_TO_BINANCE[timeframe];
       if (!tf) return;
+
+      // Check cache first (unless forcing refresh)
+      const cacheKey = `${symbol}_${timeframe}`;
+      const cached = timeframeCacheRef.current[cacheKey];
+      if (!forceRefresh && cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+        setPriceHistories((prev) => ({ ...prev, [symbol]: cached.data }));
+        return;
+      }
 
       let points: PricePoint[] = [];
 
@@ -225,6 +237,8 @@ export default function useChartHistory({
         }
 
         const windowedPoints = applyTimeframeWindow(points, timeframe);
+        // Store in cache
+        timeframeCacheRef.current[cacheKey] = { data: windowedPoints, fetchedAt: Date.now() };
         setPriceHistories((prev) => ({ ...prev, [symbol]: windowedPoints }));
       } catch {
         // keep previous history
@@ -234,14 +248,14 @@ export default function useChartHistory({
   );
 
   const refreshHistory = useCallback(
-    async (showLoading = false) => {
+    async (showLoading = false, forceRefresh = false) => {
       if (!authChecked || stableSelectedSymbols.length === 0) return;
 
       if (showLoading) setChartLoading(true);
       try {
         await Promise.all(
           stableSelectedSymbols.map((symbol) =>
-            fetchHistory(symbol, activeTimeframe),
+            fetchHistory(symbol, activeTimeframe, forceRefresh),
           ),
         );
       } finally {
@@ -252,11 +266,12 @@ export default function useChartHistory({
   );
 
   useEffect(() => {
-    refreshHistory(true).catch(() => undefined);
+    // Initial load or timeframe change - use cache if available
+    refreshHistory(true, false).catch(() => undefined);
   }, [refreshHistory]);
 
   usePollingTask(
-    useCallback(() => refreshHistory(false), [refreshHistory]),
+    useCallback(() => refreshHistory(false, true), [refreshHistory]), // Polling forces refresh
     5000,
     authChecked && stableSelectedSymbols.length > 0,
   );

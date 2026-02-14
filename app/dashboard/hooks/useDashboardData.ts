@@ -61,6 +61,7 @@ export default function useDashboardData(router: AppRouterInstance) {
   const [displayCurrency, setDisplayCurrency] =
     useState<DisplayCurrency>("USD");
   const [holdings, setHoldings] = useState<Record<string, number>>({});
+  const [balanceUsdt, setBalanceUsdt] = useState<number>(0);
   const [holdingValuesUsdt, setHoldingValuesUsdt] = useState<
     Record<string, number>
   >({});
@@ -87,6 +88,7 @@ export default function useDashboardData(router: AppRouterInstance) {
     const nextCurrency = toDisplayCurrency(String(valuationCurrency || "USDT"));
     setDisplayCurrency(nextCurrency);
     setHoldings(normalizeHoldings(wallet?.holdings ?? wallet?.assets));
+    setBalanceUsdt(Number(wallet?.balanceUsdt || 0));
 
     if (!Array.isArray(walletValuations)) {
       setHoldingValuesUsdt({});
@@ -220,6 +222,7 @@ export default function useDashboardData(router: AppRouterInstance) {
     authChecked,
     displayCurrency,
     holdings,
+    balanceUsdt,
     holdingValuesUsdt,
     holdingValuesDisplay,
     availableCoins,

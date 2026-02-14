@@ -31,6 +31,23 @@ const TIME_WINDOW_MAP: Record<TimeWindow, ChartTimeframe> = {
   "1M": "30D",
 };
 
+/**
+ * Symbols known to have working Yahoo Finance chart data.
+ * Excludes stablecoins and tokens without reliable OHLC data.
+ */
+const SUPPORTED_CHART_SYMBOLS = new Set([
+  "BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "DOT", 
+  "LINK", "MATIC", "UNI", "ATOM", "LTC", "BCH", "XLM", "ALGO",
+  "NEAR", "ICP", "FIL", "VET", "HBAR", "EOS", "AAVE", "GRT",
+  "SAND", "MANA", "AXS", "ENJ", "CRV", "COMP", "MKR", "SNX",
+  "SUSHI", "YFI", "BAT", "ZRX", "1INCH", "ANKR", "CHZ", "GALA",
+]);
+
+/** Filter available coins to only those with working chart data */
+function filterChartableCoins(coins: string[]): string[] {
+  return coins.filter((symbol) => SUPPORTED_CHART_SYMBOLS.has(symbol));
+}
+
 // Inner component that uses the WarRoom context
 function WarRoomContent() {
   const router = useRouter();
@@ -41,11 +58,18 @@ function WarRoomContent() {
     authChecked,
     displayCurrency,
     holdings,
+    balanceUsdt,
     holdingValuesUsdt,
     holdingValuesDisplay,
     availableCoins,
     prices,
   } = useDashboardData(router);
+
+  // Filter to only coins with working chart data
+  const chartableCoins = useMemo(
+    () => filterChartableCoins(availableCoins),
+    [availableCoins]
+  );
 
   const { analyses, isLoading, scanCount } = useNewsAnalysis({
     profile,
@@ -204,7 +228,7 @@ function WarRoomContent() {
       string,
       { trend: "BULLISH" | "BEARISH" | "NEUTRAL"; confidence: number }
     > = {};
-    availableCoins.forEach((coin) => {
+    chartableCoins.forEach((coin) => {
       const rand = Math.random();
       predictions[coin] = {
         trend: rand > 0.6 ? "BULLISH" : rand > 0.3 ? "NEUTRAL" : "BEARISH",
@@ -212,7 +236,7 @@ function WarRoomContent() {
       };
     });
     return predictions;
-  }, [availableCoins]);
+  }, [chartableCoins]);
 
   // Mock entry prices for holdings (simulates purchase prices)
   const purchasePrices = useMemo(() => {
@@ -251,6 +275,7 @@ function WarRoomContent() {
       <div className="w-1/4 min-w-[280px] max-w-[400px] h-[calc(100vh-96px)]">
         <TacticalHoldings
           holdings={holdings}
+          balanceUsdt={balanceUsdt}
           prices={prices}
           holdingValuesUsdt={holdingValuesUsdt}
           holdingValuesDisplay={holdingValuesDisplay}
@@ -262,21 +287,21 @@ function WarRoomContent() {
       </div>
 
       {/* Main Content Area (75% width) */}
-      <div className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto h-[calc(100vh-96px)]">
-        {/* Superpositioned Graph Viewer */}
-        <div className="flex-1 min-h-[500px]" id="graph-viewer">
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-y-auto h-[calc(100vh-96px)]">
+        {/* Superpositioned Graph Viewer - shrinks when exchange bar expands */}
+        <div className="flex-1 min-h-[350px]" id="graph-viewer">
           <SuperpositionedGraph
             priceHistories={priceHistories}
             currentPrices={prices}
-            availableAssets={availableCoins}
+            availableAssets={chartableCoins}
             aiPredictions={aiPredictions}
             apiErrors={apiErrors}
             purchasePrices={purchasePrices}
           />
         </div>
 
-        {/* Intelligence Exchange Bar */}
-        <div id="intelligence-exchange">
+        {/* Intelligence Exchange Bar - fixed at bottom, doesn't overlap chart */}
+        <div id="intelligence-exchange" className="flex-shrink-0">
           <IntelligenceExchangeBar
             quotes={exchangeQuotes}
             isLoading={chartLoading || arbitrageLoading}
@@ -294,6 +319,12 @@ function WarRoomWrapper() {
   const router = useRouter();
 
   const { profile, holdings, availableCoins } = useDashboardData(router);
+  
+  // Filter to only coins with working chart data
+  const chartableCoins = useMemo(
+    () => filterChartableCoins(availableCoins),
+    [availableCoins]
+  );
 
   const { isLoading, scanCount } = useNewsAnalysis({
     profile,
@@ -304,7 +335,7 @@ function WarRoomWrapper() {
     <WarRoomLayout
       scanCount={scanCount}
       isScanning={isLoading}
-      availableAssets={availableCoins}
+      availableAssets={chartableCoins}
     >
       <WarRoomContent />
     </WarRoomLayout>

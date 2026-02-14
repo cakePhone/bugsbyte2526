@@ -43,7 +43,7 @@ export default function WarRoomFooter({
         
         <span className="text-[8px] text-zinc-700">|</span>
         
-        <span className="text-[8px] text-zinc-600">
+        <span className="text-[8px] text-zinc-600" suppressHydrationWarning>
           LAST UPDATE: {lastUpdate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
         </span>
       </div>

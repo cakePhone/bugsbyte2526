@@ -46,6 +46,7 @@ export default function IntelligenceExchangeBar({
   onExecuteTrade,
 }: IntelligenceExchangeBarProps) {
   const { state, setBuyMode } = useWarRoom();
+  const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default
   const [buyModal, setBuyModal] = useState<{
     isOpen: boolean;
     exchange: string;
@@ -53,6 +54,13 @@ export default function IntelligenceExchangeBar({
   }>({ isOpen: false, exchange: "", symbol: "" });
   const isBuyMode = state.buyMode.active;
   const buySymbol = state.buyMode.symbol;
+
+  // Auto-expand when buy mode is activated
+  const prevBuyModeRef = useState(isBuyMode);
+  if (isBuyMode && !prevBuyModeRef[0]) {
+    setIsCollapsed(false);
+  }
+  prevBuyModeRef[0] = isBuyMode;
 
   // Sort quotes by net price (lowest first)
   const sortedQuotes = [...quotes].sort(
@@ -83,10 +91,8 @@ export default function IntelligenceExchangeBar({
   };
 
   const handleExecute = (exchange: string, symbol: string) => {
-    if (isBuyMode) {
-      setBuyModal({ isOpen: true, exchange, symbol });
-      return;
-    }
+    // Always open buy modal when clicking an exchange card
+    setBuyModal({ isOpen: true, exchange, symbol });
   };
 
   const handleBuyConfirm = (amountUsdt: number) => {
@@ -102,11 +108,20 @@ export default function IntelligenceExchangeBar({
     <div
       className={`border-4 bg-black ${apiFailed ? "border-[#FF0000] animate-pulse" : isBuyMode ? "border-[#00FF88]" : "border-white"}`}
     >
-      {/* Header */}
+      {/* Header - Clickable to toggle */}
       <div
-        className={`border-b-4 px-4 py-2 flex items-center justify-between ${isBuyMode ? "border-[#00FF88] bg-[#00FF88]/10" : "border-white"}`}
+        className={`border-b-4 px-4 py-2 flex items-center justify-between cursor-pointer select-none ${isBuyMode ? "border-[#00FF88] bg-[#00FF88]/10" : "border-white"} ${!isCollapsed ? "" : "border-b-0"}`}
+        onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-3">
+          {/* Collapse indicator */}
+          <motion.span
+            animate={{ rotate: isCollapsed ? 0 : 90 }}
+            transition={{ duration: 0.2 }}
+            className="text-white font-mono text-sm"
+          >
+            ▶
+          </motion.span>
           <h3 className="text-sm font-black font-mono uppercase tracking-widest text-white">
             {isBuyMode
               ? "BUY ORDER — SELECT SELLER"
@@ -126,7 +141,10 @@ export default function IntelligenceExchangeBar({
         <div className="flex items-center gap-2">
           {isBuyMode && (
             <button
-              onClick={() => setBuyMode(false, null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setBuyMode(false, null);
+              }}
               className="text-[10px] font-black font-mono text-[#FF0000] hover:text-white border border-[#FF0000] px-2 py-0.5 transition-colors"
             >
               CANCEL
@@ -144,11 +162,23 @@ export default function IntelligenceExchangeBar({
           <span className="text-[10px] font-mono text-gray-500">
             {quotes.length} {isBuyMode ? "SELLERS" : "EXCHANGES"}
           </span>
+          <span className="text-[8px] font-mono text-gray-600">
+            {isCollapsed ? "[CLICK TO EXPAND]" : "[CLICK TO COLLAPSE]"}
+          </span>
         </div>
       </div>
 
-      {/* Exchange/Seller Cards - Horizontal Scroll */}
-      <div className="overflow-x-auto">
+      {/* Exchange/Seller Cards - Collapsible */}
+      <AnimatePresence>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t-4 border-white overflow-x-auto">
         <div className="flex min-w-max">
           {sortedQuotes.length === 0 ? (
             <div className="px-6 py-8 text-sm font-mono text-gray-600 uppercase">
@@ -306,7 +336,10 @@ export default function IntelligenceExchangeBar({
             })
           )}
         </div>
-      </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AmountPromptModal
         isOpen={buyModal.isOpen}
