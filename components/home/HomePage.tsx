@@ -10,6 +10,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import ClientBackground from "@/app/components/ClientBackground";
 
 interface HomePageProps {
   onAccountClick: () => void;
@@ -87,6 +88,9 @@ export default function HomePage({
       animate="visible"
       variants={containerVariants}
     >
+      {/* Interactive PixelBlast Background */}
+      <ClientBackground />
+
       {/* Background Grid Pattern */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -127,47 +131,6 @@ export default function HomePage({
       />
 
       {/* ═══════════════════════════════════════════════════════════
-          TOP NAVIGATION ROW
-          ═══════════════════════════════════════════════════════════ */}
-      <motion.header
-        className="absolute top-4 left-4 right-4 flex items-center justify-between px-8 py-4"
-        variants={textVariants}
-      >
-        {/* Logo - Left */}
-        <motion.div
-          className="flex items-center gap-4 border-4 border-white px-4 py-2 bg-[#121212] cursor-pointer group"
-          whileHover={{ borderColor: "#FF0000" }}
-          transition={{ duration: 0.1 }}
-        >
-          <span className="text-2xl">🏯</span>
-          <span className="text-xl font-bold tracking-widest text-white group-hover:text-[#FF0000] transition-colors">
-            GEISHA GAINS
-          </span>
-        </motion.div>
-
-        {/* Navigation - Right */}
-        <nav className="flex items-center gap-2">
-          {[
-            { label: "ACCOUNT", onClick: onAccountClick },
-            { label: "DASHBOARD", onClick: onDashboardClick },
-            { label: "BULLETIN", onClick: onBulletinClick },
-          ].map((item) => (
-            <motion.button
-              key={item.label}
-              onClick={item.onClick}
-              className="border-4 border-white bg-[#121212] text-white px-6 py-2 font-bold text-sm tracking-widest
-                         hover:bg-white hover:text-[#121212] transition-all duration-100
-                         focus:outline-none focus:border-[#FF0000]"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              [ {item.label} ]
-            </motion.button>
-          ))}
-        </nav>
-      </motion.header>
-
-      {/* ═══════════════════════════════════════════════════════════
           CENTER ANCHOR - THE SLOGAN
           ═══════════════════════════════════════════════════════════ */}
       <motion.main
@@ -187,10 +150,13 @@ export default function HomePage({
           variants={textVariants}
         >
           <span className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] font-bold text-white tracking-widest">
-            —
+            -
           </span>
           <span className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] font-bold text-white tracking-widest">
             WAR ROOM
+          </span>
+          <span className="text-[2.5rem] md:text-[3rem] lg:text-[3.5rem] font-bold text-white tracking-widest">
+            -
           </span>
         </motion.div>
 
