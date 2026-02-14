@@ -16,6 +16,7 @@ import SuperpositionedGraph from "@/components/dashboard/SuperpositionedGraph";
 import IntelligenceExchangeBar, {
   generateMockExchangeQuotes,
 } from "@/components/dashboard/IntelligenceExchangeBar";
+import ArbitrageBulletin from "@/components/dashboard/ArbitrageBulletin";
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
@@ -227,8 +228,14 @@ function WarRoomContent() {
     setApiErrors(errors);
   }, [chartLoading, priceHistories, selectedSymbols]);
 
-  const { loading: arbitrageLoading, scanCount: arbitrageScanCount } =
-    useArbitrageMonitor(authChecked);
+  const {
+    loading: arbitrageLoading,
+    scanCount: arbitrageScanCount,
+    opportunities: arbitrageOpportunities,
+    orders: arbitrageOrders,
+    cumulativePnL,
+    opportunityHistory,
+  } = useArbitrageMonitor(authChecked);
 
   // Compute threatened symbols from news analysis
   const threatenedSymbols = useMemo(() => {
@@ -325,7 +332,7 @@ function WarRoomContent() {
       </div>
 
       {/* Main Content Area (75% width) */}
-      <div className="grid p-4 gap-4">
+      <div className="grid p-4 gap-4" style={{ gridTemplateRows: "1fr auto auto" }}>
         {/* Superpositioned Graph Viewer - shrinks when exchange bar expands */}
         <SuperpositionedGraph
           priceHistories={priceHistories}
@@ -334,6 +341,16 @@ function WarRoomContent() {
           aiPredictions={aiPredictions}
           apiErrors={apiErrors}
           purchasePrices={purchasePrices}
+        />
+
+        {/* Arbitrage Bulletin — P&L, Opportunities & Orders */}
+        <ArbitrageBulletin
+          cumulativePnL={cumulativePnL}
+          opportunities={arbitrageOpportunities}
+          opportunityHistory={opportunityHistory}
+          orders={arbitrageOrders}
+          scanCount={arbitrageScanCount}
+          isLoading={arbitrageLoading}
         />
 
         {/* Intelligence Exchange Bar - fixed at bottom, doesn't overlap chart */}
