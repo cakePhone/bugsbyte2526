@@ -182,9 +182,9 @@ export default function WarRoom() {
 
             <button
               onClick={() => router.push("/settings")}
-              className="border-2 border-gray-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-white hover:text-white transition-colors"
+              className="border-2 border-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#FF0000] hover:border-[#FF0000] hover:text-white transition-colors flex items-center gap-1"
             >
-              ⚙ BASE
+              ⚙️ BASE OF OPERATIONS
             </button>
             <button
               onClick={() => router.push("/fund")}
