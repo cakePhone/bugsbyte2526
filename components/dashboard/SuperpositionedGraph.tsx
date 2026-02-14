@@ -423,7 +423,11 @@ export default function SuperpositionedGraph({
       const entryPrice = purchasePrices[layer.symbol];
       const existingPriceLine = priceLinesRef.current.get(layer.symbol);
       if (existingPriceLine) {
-        try { series.removePriceLine(existingPriceLine); } catch (_) { /* already removed */ }
+        try {
+          series.removePriceLine(existingPriceLine);
+        } catch (_) {
+          /* already removed */
+        }
         priceLinesRef.current.delete(layer.symbol);
       }
       if (entryPrice && layer.isPrimary) {
@@ -528,7 +532,7 @@ export default function SuperpositionedGraph({
   return (
     <div
       className={
-        "border-4 bg-black flex flex-col relative " +
+        "border-4 bg-black flex flex-col relative flex-grow w-full " +
         (hasApiError ? "border-[#FF0000] animate-pulse" : "border-white")
       }
     >

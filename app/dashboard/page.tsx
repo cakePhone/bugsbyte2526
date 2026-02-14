@@ -305,9 +305,12 @@ function WarRoomContent() {
   }
 
   return (
-    <div className="flex">
+    <div
+      className="grid grid-cols-2 w-screen gap-0 max-h-[100vh - 200px]"
+      style={{ gridTemplateColumns: "25% 75%" }}
+    >
       {/* Left Sidebar - Tactical Holdings (25% width) */}
-      <div className="w-1/4 min-w-[280px] max-w-[400px]">
+      <div className="grid">
         <TacticalHoldings
           holdings={holdings}
           balanceUsdt={balanceUsdt}
@@ -322,7 +325,7 @@ function WarRoomContent() {
       </div>
 
       {/* Main Content Area (75% width) */}
-      <div className="flex flex-col p-4 gap-4 w-full h-full">
+      <div className="grid p-4 gap-4">
         {/* Superpositioned Graph Viewer - shrinks when exchange bar expands */}
         <SuperpositionedGraph
           priceHistories={priceHistories}
