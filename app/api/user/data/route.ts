@@ -64,13 +64,20 @@ export async function GET() {
     {} as Record<string, number>,
   );
 
-  const holdings =
-    Object.keys(coinWalletAssets).length > 0 ? coinWalletAssets : walletAssets;
+  const holdings = Object.entries(walletAssets).reduce(
+    (acc, [symbol, amount]) => {
+      const key = String(symbol || "").toUpperCase();
+      const value = Number(amount || 0);
+      if (!key || !Number.isFinite(value) || value <= 0) return acc;
+      acc[key] = (acc[key] || 0) + value;
+      return acc;
+    },
+    { ...coinWalletAssets } as Record<string, number>,
+  );
 
   const valuation = await computeAndPersistWalletValuations({
     userId: session.sub,
     preferences: user?.preferences,
-    balanceUsdt: wallet?.balanceUsdt || 0,
     assets: holdings,
   });
 

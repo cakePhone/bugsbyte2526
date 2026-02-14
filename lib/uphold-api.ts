@@ -20,8 +20,7 @@ export interface MarketPrice {
   timestamp: number;
 }
 
-const UPHOLD_API_BASE = 'https://api.uphold.com/v0';
-const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'XRP'] as const;
+const UPHOLD_API_BASE = "https://api.uphold.com/v0";
 
 /**
  * Fetch real-time price from Uphold
@@ -30,11 +29,11 @@ export async function fetchUpholdPrice(symbol: string): Promise<MarketPrice> {
   try {
     const pair = `${symbol}-USD`;
     const response = await fetch(`${UPHOLD_API_BASE}/ticker/${pair}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -42,7 +41,7 @@ export async function fetchUpholdPrice(symbol: string): Promise<MarketPrice> {
     }
 
     const data: UpholdTicker = await response.json();
-    
+
     // Calculate mock 24h change (Uphold ticker doesn't provide this directly)
     const price = parseFloat(data.ask);
     const change24h = (Math.random() - 0.5) * 10; // Mock -5% to +5%
@@ -64,8 +63,16 @@ export async function fetchUpholdPrice(symbol: string): Promise<MarketPrice> {
 /**
  * Fetch all supported crypto prices
  */
-export async function fetchAllPrices(): Promise<MarketPrice[]> {
-  const promises = SUPPORTED_SYMBOLS.map((symbol) => fetchUpholdPrice(symbol));
+export async function fetchAllPrices(
+  symbols: string[],
+): Promise<MarketPrice[]> {
+  const normalized = symbols
+    .map((symbol) => String(symbol || "").toUpperCase())
+    .filter(Boolean);
+
+  if (normalized.length === 0) return [];
+
+  const promises = normalized.map((symbol) => fetchUpholdPrice(symbol));
   return Promise.all(promises);
 }
 
@@ -77,6 +84,10 @@ function generateMockPrice(symbol: string): MarketPrice {
     BTC: 95000,
     ETH: 3500,
     XRP: 2.5,
+    SOL: 150,
+    ADA: 1.2,
+    DOGE: 0.15,
+    LTC: 110,
   };
 
   const basePrice = basePrices[symbol] || 100;
@@ -97,9 +108,11 @@ function generateMockPrice(symbol: string): MarketPrice {
 /**
  * Stream prices with Server-Sent Events (for real-time updates)
  */
-export async function* streamPrices(): AsyncGenerator<MarketPrice[], void, unknown> {
+export async function* streamPrices(
+  symbols: string[],
+): AsyncGenerator<MarketPrice[], void, unknown> {
   while (true) {
-    const prices = await fetchAllPrices();
+    const prices = await fetchAllPrices(symbols);
     yield prices;
     
     // Wait 3 seconds before next update

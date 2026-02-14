@@ -6,11 +6,11 @@
  * Pulses red when PARANOID user receives high-threat news.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import type { NewsAnalysis } from '@/app/api/news/analyze/route';
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 
 interface ThreatRadarProps {
   analyses: NewsAnalysis[];
@@ -19,35 +19,50 @@ interface ThreatRadarProps {
 }
 
 interface RadarAxes {
-  volatility: number;   // 0-10
-  geopolitics: number;  // 0-10
-  sentiment: number;    // 0-10
-  exposure: number;     // 0-10
+  volatility: number; // 0-10
+  geopolitics: number; // 0-10
+  sentiment: number; // 0-10
+  exposure: number; // 0-10
 }
 
-export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatRadarProps) {
+export default function ThreatRadar({
+  analyses,
+  sensitivity,
+  holdings,
+}: ThreatRadarProps) {
   const [pulse, setPulse] = useState(false);
 
   // ── Calculate axes from analyses ────────────────────────
   const axes = useMemo((): RadarAxes => {
-    if (analyses.length === 0) return { volatility: 1, geopolitics: 1, sentiment: 1, exposure: 1 };
+    if (analyses.length === 0)
+      return { volatility: 1, geopolitics: 1, sentiment: 1, exposure: 1 };
 
     const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
     // Volatility: average threat level
-    const volatility = Math.min(10, avg(analyses.map((a) => a.threat_level)) + Math.random());
+    const volatility = Math.min(
+      10,
+      avg(analyses.map((a) => a.threat_level)) + Math.random(),
+    );
 
     // Geopolitics: regulation + macro articles count * weight
     const geoItems = analyses.filter(
-      (a) => a.original.category === 'REGULATION' || a.original.category === 'MACRO'
+      (a) =>
+        a.original.category === "REGULATION" || a.original.category === "MACRO",
     );
-    const geopolitics = Math.min(10, (geoItems.length / analyses.length) * 10 + 2);
+    const geopolitics = Math.min(
+      10,
+      (geoItems.length / analyses.length) * 10 + 2,
+    );
 
     // Sentiment: bearish/lethal ratio
     const bearish = analyses.filter(
-      (a) => a.sentiment === 'BEARISH' || a.sentiment === 'LETHAL'
+      (a) => a.sentiment === "BEARISH" || a.sentiment === "LETHAL",
     );
-    const sentimentScore = Math.min(10, (bearish.length / analyses.length) * 10 + 1);
+    const sentimentScore = Math.min(
+      10,
+      (bearish.length / analyses.length) * 10 + 1,
+    );
 
     // Exposure: how many of user's holdings appear in affected assets
     const heldSymbols = Object.keys(holdings);
@@ -57,7 +72,10 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
         if (heldSymbols.includes(sym)) exposureHits++;
       });
     });
-    const exposure = Math.min(10, (exposureHits / Math.max(1, analyses.length)) * 8 + 1);
+    const exposure = Math.min(
+      10,
+      (exposureHits / Math.max(1, analyses.length)) * 8 + 1,
+    );
 
     return {
       volatility: +volatility.toFixed(1),
@@ -70,7 +88,7 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
   // ── Pulse on high threat for PARANOID users ─────────────
   useEffect(() => {
     const highThreat = analyses.some((a) => a.threat_level >= 8);
-    if (sensitivity === 'PARANOID' && highThreat) {
+    if (sensitivity === "PARANOID" && highThreat) {
       setPulse(true);
       const t = setTimeout(() => setPulse(false), 3000);
       return () => clearTimeout(t);
@@ -78,12 +96,22 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
   }, [analyses, sensitivity]);
 
   // ── SVG Radar Drawing ───────────────────────────────────
-  const size = 200;
+  const size = 220;
   const cx = size / 2;
   const cy = size / 2;
-  const maxR = 80;
-  const labels = ['VOLATILITY', 'GEOPOLITICS', 'SENTIMENT', 'EXPOSURE'] as const;
-  const values = [axes.volatility, axes.geopolitics, axes.sentiment, axes.exposure];
+  const maxR = 72;
+  const labels = [
+    "VOLATILITY",
+    "GEOPOLITICS",
+    "SENTIMENT",
+    "EXPOSURE",
+  ] as const;
+  const values = [
+    axes.volatility,
+    axes.geopolitics,
+    axes.sentiment,
+    axes.exposure,
+  ];
 
   // 4 axes at 90° intervals, starting from top
   const angleStep = (2 * Math.PI) / 4;
@@ -101,28 +129,42 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
 
   // Data polygon points
   const dataPoints = values.map((v, i) => getPoint(i, v));
-  const polygonStr = dataPoints.map((p) => `${p.x},${p.y}`).join(' ');
+  const polygonStr = dataPoints.map((p) => `${p.x},${p.y}`).join(" ");
 
   const overallThreat = values.reduce((a, b) => a + b, 0) / 4;
 
   return (
     <div
       className={`border-4 bg-black h-full flex flex-col ${
-        pulse ? 'border-[#FF0000] shadow-[0_0_30px_rgba(255,0,0,0.5)]' : 'border-white'
+        pulse
+          ? "border-[#FF0000] shadow-[0_0_30px_rgba(255,0,0,0.5)]"
+          : "border-white"
       } transition-all duration-300`}
     >
       {/* Header */}
       <div className="border-b-4 border-white px-4 py-2 flex items-center justify-between">
-        <h2 className="text-sm font-bold tracking-widest text-white">THREAT RADAR</h2>
+        <h2 className="text-sm font-bold tracking-widest text-white">
+          THREAT RADAR
+        </h2>
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-bold px-1.5 py-0.5 ${
-            overallThreat > 7 ? 'bg-[#FF0000] text-white' : overallThreat > 4 ? 'bg-[#D4AF37] text-black' : 'bg-gray-800 text-gray-400'
-          }`}>
+          <span
+            className={`text-xs font-bold px-1.5 py-0.5 ${
+              overallThreat > 7
+                ? "bg-[#FF0000] text-white"
+                : overallThreat > 4
+                  ? "bg-[#D4AF37] text-black"
+                  : "bg-gray-800 text-gray-400"
+            }`}
+          >
             AVG {overallThreat.toFixed(1)}
           </span>
-          <span className={`text-[9px] border px-1 py-0.5 ${
-            sensitivity === 'PARANOID' ? 'border-[#FF0000] text-[#FF0000]' : 'border-gray-600 text-gray-500'
-          }`}>
+          <span
+            className={`text-[9px] border px-1 py-0.5 ${
+              sensitivity === "PARANOID"
+                ? "border-[#FF0000] text-[#FF0000]"
+                : "border-gray-600 text-gray-500"
+            }`}
+          >
             {sensitivity}
           </span>
         </div>
@@ -133,7 +175,7 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
         <motion.svg
           width={size}
           height={size}
-          viewBox={`0 0 ${size} ${size}`}
+          viewBox={`-10 -10 ${size + 20} ${size + 20}`}
           className="max-w-full"
           animate={pulse ? { scale: [1, 1.02, 1] } : {}}
           transition={pulse ? { repeat: Infinity, duration: 0.5 } : {}}
@@ -143,7 +185,7 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
             const points = [0, 1, 2, 3]
               .map((i) => getPoint(i, ring))
               .map((p) => `${p.x},${p.y}`)
-              .join(' ');
+              .join(" ");
             return (
               <polygon
                 key={ring}
@@ -175,8 +217,8 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
           {/* Data Polygon */}
           <motion.polygon
             points={polygonStr}
-            fill={pulse ? 'rgba(255,0,0,0.3)' : 'rgba(255,255,255,0.15)'}
-            stroke={pulse ? '#FF0000' : '#FFFFFF'}
+            fill={pulse ? "rgba(255,0,0,0.3)" : "rgba(255,255,255,0.15)"}
+            stroke={pulse ? "#FF0000" : "#FFFFFF"}
             strokeWidth={2}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -190,7 +232,7 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
               cx={p.x}
               cy={p.y}
               r={4}
-              fill={values[i] > 7 ? '#FF0000' : '#FFFFFF'}
+              fill={values[i] > 7 ? "#FF0000" : "#FFFFFF"}
               stroke="#000"
               strokeWidth={1}
               initial={{ scale: 0 }}
@@ -201,16 +243,16 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
 
           {/* Labels */}
           {[0, 1, 2, 3].map((i) => {
-            const end = getPoint(i, 12);
-            const labelAnchors = ['middle', 'start', 'middle', 'end'] as const;
-            const dy = ['-8', '4', '16', '4'];
+            const end = getPoint(i, 10.8);
+            const labelAnchors = ["middle", "start", "middle", "end"] as const;
+            const dx = [0, 8, 0, -8];
+            const dy = [-6, 4, 13, 4];
             return (
               <text
                 key={`label-${i}`}
-                x={end.x}
-                y={end.y}
+                x={end.x + dx[i]}
+                y={end.y + dy[i]}
                 textAnchor={labelAnchors[i]}
-                dy={dy[i]}
                 className="text-[8px] font-bold fill-gray-400"
               >
                 {labels[i]} ({values[i].toFixed(1)})
@@ -224,10 +266,14 @@ export default function ThreatRadar({ analyses, sensitivity, holdings }: ThreatR
       <div className="border-t-4 border-white grid grid-cols-4 divide-x-2 divide-gray-800">
         {labels.map((label, i) => (
           <div key={label} className="px-2 py-2 text-center">
-            <div className={`text-base font-bold ${values[i] > 7 ? 'text-[#FF0000]' : 'text-white'}`}>
+            <div
+              className={`text-base font-bold ${values[i] > 7 ? "text-[#FF0000]" : "text-white"}`}
+            >
               {values[i].toFixed(1)}
             </div>
-            <div className="text-[8px] text-gray-500 tracking-wider">{label.slice(0, 4)}</div>
+            <div className="text-[8px] text-gray-500 tracking-wider">
+              {label.slice(0, 4)}
+            </div>
           </div>
         ))}
       </div>

@@ -219,7 +219,7 @@ function mapNewsArticle(item: any, endpoint: string): NewsArticle {
 }
 
 function extractSymbols(chunks: string[]): string[] {
-  const supported = ["BTC", "ETH", "XRP", "USDT"];
+  const supported = ["BTC", "ETH", "XRP", "USDT", "SOL", "ADA", "DOGE", "LTC"];
   const text = chunks.join(" ").toUpperCase();
   return supported.filter((sym) => new RegExp(`\\b${sym}\\b`, "i").test(text));
 }

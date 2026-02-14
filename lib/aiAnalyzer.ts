@@ -44,8 +44,8 @@ export interface AnalyzerSnapshot {
 
 // ─── Exchange Price Fetchers ─────────────────────────────────────────
 
-const UPHOLD_API = 'https://api.uphold.com/v0';
-const SYMBOLS = ['BTC', 'ETH', 'XRP'] as const;
+const UPHOLD_API = "https://api.uphold.com/v0";
+const FALLBACK_SYMBOLS = ["BTC", "ETH", "XRP", "SOL", "ADA"];
 
 /** Fetch from Uphold (real API, public endpoint) */
 async function fetchUphold(symbol: string): Promise<ExchangeQuote> {
@@ -243,8 +243,9 @@ function calculateSentiment(
 
 export async function runArbitrageAnalysis(): Promise<AnalyzerSnapshot> {
   const opportunities: ArbitrageOpportunity[] = [];
+  const symbols = FALLBACK_SYMBOLS;
 
-  for (const symbol of SYMBOLS) {
+  for (const symbol of symbols) {
     // 1) Poll all 3 exchanges
     const uphold = await fetchUphold(symbol);
     const brew = fetchBrewSwap(symbol, uphold.ask);

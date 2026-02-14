@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchAllPrices } from "@/lib/uphold-api";
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 import { analyzeMarketWithNIM } from "@/lib/nvidia-nim";
 import { getPrices } from "@/lib/market-aggregator";
 import { calculateNetProfit } from "@/lib/market-aggregator/netProfit";
@@ -33,7 +34,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Fetch real-time prices from Uphold
-    const marketPrices = await fetchAllPrices();
+    const supported = await getAvailableSymbols({ limit: 200 });
+    const marketPrices = await fetchAllPrices(supported);
 
     // 2. Save market snapshots
     await Promise.all(

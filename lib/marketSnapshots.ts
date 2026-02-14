@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 
 export type QuoteCurrency = "USDT" | "EUR";
 
@@ -9,44 +10,72 @@ const SYMBOL_TO_ID: Record<string, string> = {
   USDT: "tether",
 };
 
-const SYMBOLS = Object.keys(SYMBOL_TO_ID);
+const DEFAULT_SYMBOLS = Object.keys(SYMBOL_TO_ID);
+
+async function fetchUsdtEurRate(): Promise<number> {
+  try {
+    const res = await fetch("https://api.uphold.com/v0/ticker/USDT-EUR", {
+      cache: "no-store",
+    });
+    if (!res.ok) return 0.92;
+    const data = (await res.json()) as { ask?: string; bid?: string };
+    const ask = Number(data.ask || 0);
+    const bid = Number(data.bid || 0);
+    const price = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
+    if (!Number.isFinite(price) || price <= 0) return 0.92;
+    return price;
+  } catch {
+    return 0.92;
+  }
+}
 
 export async function collectMarketSnapshots() {
-  const ids = Object.values(SYMBOL_TO_ID).join(",");
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,eur`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Market snapshot fetch failed (${res.status})`);
-  }
-
-  const data = (await res.json()) as Record<
-    string,
-    { usd?: number; eur?: number }
-  >;
+  const symbols = await getAvailableSymbols({ limit: 200 });
   const now = new Date();
 
-  const rows = SYMBOLS.flatMap((symbol) => {
-    const id = SYMBOL_TO_ID[symbol];
-    const usd = Number(data[id]?.usd || 0);
-    const eur = Number(data[id]?.eur || 0);
+  const rows: Array<{
+    symbol: string;
+    price: number;
+    source: string;
+    timestamp: Date;
+  }> = [];
 
-    return [
-      {
-        symbol: `${symbol}_USDT`,
-        price: usd,
-        source: "coingecko",
-        timestamp: now,
-      },
-      {
-        symbol: `${symbol}_EUR`,
-        price: eur,
-        source: "coingecko",
-        timestamp: now,
-      },
-    ];
-  });
+  const chunkSize = 15;
+  for (let i = 0; i < symbols.length; i += chunkSize) {
+    const chunk = symbols.slice(i, i + chunkSize);
+    const settled = await Promise.allSettled(
+      chunk.map(async (symbol) => {
+        const res = await fetch(
+          `https://api.uphold.com/v0/ticker/${symbol}-USD`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return null;
 
-  await prisma.marketSnap.createMany({ data: rows });
+        const data = (await res.json()) as { ask?: string; bid?: string };
+        const ask = Number(data.ask || 0);
+        const bid = Number(data.bid || 0);
+        const price = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
+        if (!Number.isFinite(price) || price <= 0) return null;
+
+        return {
+          symbol: `${symbol}_USDT`,
+          price,
+          source: "uphold",
+          timestamp: now,
+        };
+      }),
+    );
+
+    settled.forEach((result) => {
+      if (result.status === "fulfilled" && result.value) {
+        rows.push(result.value);
+      }
+    });
+  }
+
+  if (rows.length > 0) {
+    await prisma.marketSnap.createMany({ data: rows });
+  }
 
   return rows;
 }
@@ -54,13 +83,14 @@ export async function collectMarketSnapshots() {
 export async function getLatestQuotePrices(
   quoteCurrency: QuoteCurrency,
 ): Promise<Record<string, number>> {
-  const quoteSuffix = quoteCurrency === "EUR" ? "EUR" : "USDT";
-  const keys = SYMBOLS.map((symbol) => `${symbol}_${quoteSuffix}`);
+  const quoteSuffix = "USDT";
+  const symbols = await getAvailableSymbols({ limit: 200 });
+  const keys = symbols.map((symbol) => `${symbol}_${quoteSuffix}`);
 
   let snaps = await prisma.marketSnap.findMany({
     where: { symbol: { in: keys } },
     orderBy: { timestamp: "desc" },
-    take: 50,
+    take: 200,
   });
 
   const found = new Set(snaps.map((s) => s.symbol));
@@ -71,7 +101,7 @@ export async function getLatestQuotePrices(
     snaps = await prisma.marketSnap.findMany({
       where: { symbol: { in: keys } },
       orderBy: { timestamp: "desc" },
-      take: 50,
+      take: 200,
     });
   }
 
@@ -83,8 +113,15 @@ export async function getLatestQuotePrices(
   }
 
   const out: Record<string, number> = {};
-  for (const symbol of SYMBOLS) {
-    out[symbol] = latestByKey.get(`${symbol}_${quoteSuffix}`) || 0;
+  const conversionRate =
+    quoteCurrency === "EUR" ? await fetchUsdtEurRate() : 1;
+  for (const symbol of symbols) {
+    const raw = latestByKey.get(`${symbol}_${quoteSuffix}`) || 0;
+    out[symbol] = raw * conversionRate;
+  }
+
+  if (!out.USDT) {
+    out.USDT = conversionRate;
   }
 
   return out;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { fetchAllPrices } from "@/lib/uphold-api";
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 import { collectMarketSnapshots } from "@/lib/marketSnapshots";
 import { computeAndPersistWalletValuations } from "@/lib/walletValuation";
 
@@ -22,6 +23,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
+    const supported = await getAvailableSymbols({ limit: 200 });
+
     const [user, wallet, transactions, market] = await Promise.all([
       prisma.user.findUnique({
         where: { id: session.sub },
@@ -33,7 +36,7 @@ export async function GET() {
         orderBy: { timestamp: "desc" },
         take: 200,
       }),
-      fetchAllPrices(),
+      fetchAllPrices(supported),
     ]);
 
     try {
@@ -50,7 +53,6 @@ export async function GET() {
     const valuation = await computeAndPersistWalletValuations({
       userId: session.sub,
       preferences: user?.preferences,
-      balanceUsdt: wallet?.balanceUsdt ?? 0,
       assets,
     });
 

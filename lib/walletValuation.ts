@@ -25,7 +25,6 @@ export function resolveQuoteCurrency(preferences: unknown): QuoteCurrency {
 export async function computeAndPersistWalletValuations(params: {
   userId: string;
   preferences: unknown;
-  balanceUsdt: number;
   assets: Record<string, number>;
 }) {
   const quoteCurrency = resolveQuoteCurrency(params.preferences);
@@ -43,15 +42,6 @@ export async function computeAndPersistWalletValuations(params: {
         currency: quoteCurrency,
       };
     });
-
-  const cashUnit = quoteCurrency === "EUR" ? prices.USDT || 0.92 : 1;
-  entries.unshift({
-    symbol: quoteCurrency,
-    amount: params.balanceUsdt,
-    unitPrice: cashUnit,
-    currentValue: params.balanceUsdt * cashUnit,
-    currency: quoteCurrency,
-  });
 
   const prevPreferences =
     params.preferences && typeof params.preferences === "object"

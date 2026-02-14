@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { fetchAllPrices } from "@/lib/uphold-api";
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 import { analyzeMarketWithNIM } from "@/lib/nvidia-nim";
 
 export async function GET() {
@@ -17,7 +18,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const marketPrices = await fetchAllPrices();
+    const supported = await getAvailableSymbols({ limit: 200 });
+    const marketPrices = await fetchAllPrices(supported);
     const analyses = await analyzeMarketWithNIM(marketPrices);
 
     const buys = analyses

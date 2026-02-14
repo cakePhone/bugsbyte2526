@@ -3,7 +3,7 @@
  * Geisha Gains • Coffee Driven Development
  *
  * Expects: { amount: number }
- * Adds the amount to the user's USDT balance.
+ * Adds the amount to user's USDT coin wallet balance.
  */
 
 import { NextResponse } from "next/server";
@@ -26,18 +26,42 @@ export async function POST(req: Request) {
       );
     }
 
-    const wallet = await prisma.$transaction(async (tx) => {
-      const updatedWallet = await tx.wallet.upsert({
+    const funded = await prisma.$transaction(async (tx) => {
+      await tx.wallet.upsert({
         where: { userId: session.sub },
-        update: {
-          balanceUsdt: { increment: amount },
-        },
+        update: {},
         create: {
           userId: session.sub,
-          balanceUsdt: amount,
+          balanceUsdt: 0,
           assets: {},
         },
       });
+
+      const db = tx as any;
+      const usdtWallet = await db.coinWallet.findFirst({
+        where: { userId: session.sub, symbol: "USDT" },
+        orderBy: { createdAt: "asc" },
+      });
+
+      const nextUsdtBalance = usdtWallet
+        ? Number(usdtWallet.balanceCoin || 0) + amount
+        : amount;
+
+      if (usdtWallet) {
+        await db.coinWallet.update({
+          where: { id: usdtWallet.id },
+          data: { balanceCoin: nextUsdtBalance },
+        });
+      } else {
+        await db.coinWallet.create({
+          data: {
+            userId: session.sub,
+            symbol: "USDT",
+            label: "Primary USDT",
+            balanceCoin: amount,
+          },
+        });
+      }
 
       await tx.transaction.create({
         data: {
@@ -54,11 +78,11 @@ export async function POST(req: Request) {
         },
       });
 
-      return updatedWallet;
+      return { usdtBalance: nextUsdtBalance };
     });
 
     return NextResponse.json({
-      balanceUsdt: wallet.balanceUsdt,
+      usdtBalance: funded.usdtBalance,
     });
   } catch (err: unknown) {
     console.error("[FUND]", err);

@@ -1,17 +1,18 @@
 /**
  * POST /api/user/wallets — Allocate USDT into a coin wallet
  *
- * Expects: { symbol: "BTC" | "ETH" | "XRP", amountUsdt: number }
+ * Expects: { symbol: string, amountUsdt: number }
  */
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { fetchAllPrices } from "@/lib/uphold-api";
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 
-const SUPPORTED_WALLET_COINS = ["BTC", "ETH", "XRP"] as const;
+type WalletCoin = string;
 
-type WalletCoin = (typeof SUPPORTED_WALLET_COINS)[number];
+const EPSILON = 1e-10;
 
 export async function POST(req: Request) {
   try {
@@ -24,9 +25,11 @@ export async function POST(req: Request) {
     const symbol = String(body?.symbol || "").toUpperCase() as WalletCoin;
     const amountUsdt = Number(body?.amountUsdt);
 
-    if (!SUPPORTED_WALLET_COINS.includes(symbol)) {
+    const supportedCoins = await getAvailableSymbols({ limit: 200 });
+
+    if (!supportedCoins.includes(symbol)) {
       return NextResponse.json(
-        { error: "Unsupported coin. Use BTC, ETH, or XRP." },
+        { error: "Unsupported coin. Select a supported asset." },
         { status: 400 },
       );
     }
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const market = await fetchAllPrices();
+    const market = await fetchAllPrices([symbol]);
     const current = market.find((p) => p.symbol === symbol);
     if (!current || current.price <= 0) {
       return NextResponse.json(
@@ -58,14 +61,53 @@ export async function POST(req: Request) {
         },
       });
 
-      if (wallet.balanceUsdt < amountUsdt) {
-        throw new Error("INSUFFICIENT_USDT");
-      }
-
       const assets =
         typeof wallet.assets === "object" && wallet.assets !== null
           ? (wallet.assets as Record<string, number>)
           : {};
+
+      const db = tx as any;
+      const usdtWallets = await db.coinWallet.findMany({
+        where: { userId: session.sub, symbol: "USDT" },
+        orderBy: { createdAt: "asc" },
+      });
+
+      const availableUsdtWallet = usdtWallets.reduce(
+        (sum: number, item: { balanceCoin: number }) =>
+          sum + Number(item.balanceCoin || 0),
+        0,
+      );
+
+      const availableLegacy = Number(wallet.balanceUsdt || 0);
+      const availableUsdt = availableUsdtWallet + availableLegacy;
+
+      if (availableUsdt + EPSILON < amountUsdt) {
+        throw new Error("INSUFFICIENT_USDT");
+      }
+
+      let remainingToSpend = amountUsdt;
+
+      for (const usdtWallet of usdtWallets) {
+        if (remainingToSpend <= EPSILON) break;
+        const balanceCoin = Number(usdtWallet.balanceCoin || 0);
+        if (balanceCoin <= EPSILON) continue;
+
+        const deduction = Math.min(balanceCoin, remainingToSpend);
+        const nextBalance = Math.max(0, balanceCoin - deduction);
+
+        await db.coinWallet.update({
+          where: { id: usdtWallet.id },
+          data: { balanceCoin: nextBalance },
+        });
+
+        remainingToSpend -= deduction;
+      }
+
+      const legacySpent = Math.min(
+        availableLegacy,
+        Math.max(0, remainingToSpend),
+      );
+      const nextLegacyBalance = Math.max(0, availableLegacy - legacySpent);
 
       const coinAmount = amountUsdt / current.price;
       const nextAssets = {
@@ -76,7 +118,7 @@ export async function POST(req: Request) {
       const nextWallet = await tx.wallet.update({
         where: { userId: session.sub },
         data: {
-          balanceUsdt: wallet.balanceUsdt - amountUsdt,
+          balanceUsdt: nextLegacyBalance,
           assets: nextAssets,
         },
       });

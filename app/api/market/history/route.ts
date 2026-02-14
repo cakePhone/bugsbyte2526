@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLatestQuotePrices } from "@/lib/marketSnapshots";
-
-const COINLORE_IDS: Record<string, string> = {
-  BTC: "90",
-  ETH: "80",
-  XRP: "58",
-};
+import { getAvailableSymbols } from "@/lib/coinCatalog";
 
 const TIMEFRAME_TO_WINDOW_MS: Record<string, number> = {
   "1M": 1 * 60 * 1000,
@@ -19,9 +14,41 @@ const TIMEFRAME_TO_WINDOW_MS: Record<string, number> = {
   "1Y": 365 * 24 * 60 * 60 * 1000,
 };
 
-const AVAILABLE_SYMBOLS = Object.keys(COINLORE_IDS);
+const TIMEFRAME_ALIASES: Record<string, keyof typeof TIMEFRAME_TO_WINDOW_MS> = {
+  "1M": "1M",
+  "1MIN": "1M",
+  "1MINUTE": "1M",
+  "5M": "5M",
+  "5MIN": "5M",
+  "5MINUTES": "5M",
+  "30M": "30MIN",
+  "30MIN": "30MIN",
+  "30MINUTES": "30MIN",
+  "1H": "1H",
+  "60M": "1H",
+  "60MIN": "1H",
+  "24H": "24H",
+  "1D": "24H",
+  "7D": "7D",
+  "1W": "7D",
+  "30D": "30D",
+  "1MO": "30D",
+  "1Y": "1Y",
+  "12M": "1Y",
+};
+
+const DEFAULT_SYMBOLS = ["BTC", "ETH", "XRP"];
 
 type QuoteCurrency = "USD" | "EUR";
+
+function normalizeTimeframe(
+  input: string | null,
+): keyof typeof TIMEFRAME_TO_WINDOW_MS {
+  const normalized = String(input || "24H")
+    .trim()
+    .toUpperCase();
+  return TIMEFRAME_ALIASES[normalized] || "24H";
+}
 
 async function resolveConversionRate(quote: QuoteCurrency): Promise<number> {
   if (quote === "USD") return 1;
@@ -33,38 +60,35 @@ async function resolveConversionRate(quote: QuoteCurrency): Promise<number> {
 }
 
 async function fetchAndPersistSymbol(symbol: string) {
-  const coinLoreId = COINLORE_IDS[symbol];
   const tickerRes = await fetch(
-    `https://api.coinlore.net/api/ticker/?id=${coinLoreId}`,
+    `https://api.uphold.com/v0/ticker/${symbol}-USD`,
     { cache: "no-store" },
   );
 
   if (!tickerRes.ok) {
-    throw new Error(`CoinLore request failed for ${symbol}`);
+    throw new Error(`Uphold request failed for ${symbol}`);
   }
 
-  const tickerData = (await tickerRes.json()) as Array<{
-    price_usd?: string;
-    volume24?: string;
-    percent_change_24h?: string;
-  }>;
+  const tickerData = (await tickerRes.json()) as {
+    ask?: string;
+    bid?: string;
+  };
 
-  const ticker = tickerData?.[0];
-  const price = Number(ticker?.price_usd || 0);
-  const volume24h = Number(ticker?.volume24 || 0);
-  const change24h = Number(ticker?.percent_change_24h || 0);
+  const ask = Number(tickerData?.ask || 0);
+  const bid = Number(tickerData?.bid || 0);
+  const price = ask > 0 && bid > 0 ? (ask + bid) / 2 : ask || bid || 0;
 
   if (!Number.isFinite(price) || price <= 0) {
-    throw new Error(`CoinLore returned invalid price for ${symbol}`);
+    throw new Error(`Uphold returned invalid price for ${symbol}`);
   }
 
   return prisma.marketSnap.create({
     data: {
       symbol,
       price,
-      volume24h: Number.isFinite(volume24h) ? volume24h : null,
-      change24h: Number.isFinite(change24h) ? change24h : null,
-      source: "coinlore",
+      volume24h: null,
+      change24h: null,
+      source: "uphold",
     },
   });
 }
@@ -72,25 +96,32 @@ async function fetchAndPersistSymbol(symbol: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
+    const supported = await getAvailableSymbols({ limit: 200 });
     const requested = Array.isArray(body?.symbols)
       ? body.symbols.map((s: string) => String(s).toUpperCase())
-      : AVAILABLE_SYMBOLS;
+      : supported.length > 0
+        ? supported
+        : DEFAULT_SYMBOLS;
 
-    const symbols = requested.filter((symbol: string) => COINLORE_IDS[symbol]);
+    const symbols = requested.filter((symbol: string) =>
+      supported.length > 0
+        ? supported.includes(symbol)
+        : DEFAULT_SYMBOLS.includes(symbol),
+    );
 
-    if (!symbols.length) {
-      return NextResponse.json(
-        { error: "No supported symbols provided." },
-        { status: 400 },
-      );
-    }
+    const safeSymbols =
+      symbols.length > 0
+        ? symbols
+        : supported.length > 0
+          ? supported
+          : DEFAULT_SYMBOLS;
 
     const settled = await Promise.allSettled(
-      symbols.map((symbol) => fetchAndPersistSymbol(symbol)),
+      safeSymbols.map((symbol) => fetchAndPersistSymbol(symbol)),
     );
 
     const inserted = settled
-      .map((result, index) => ({ result, symbol: symbols[index] }))
+      .map((result, index) => ({ result, symbol: safeSymbols[index] }))
       .filter((item) => item.result.status === "fulfilled")
       .map((item) => {
         const snap = (
@@ -122,7 +153,7 @@ export async function POST(req: Request) {
       inserted,
       failed,
       meta: {
-        requested: symbols.length,
+        requested: safeSymbols.length,
         inserted: inserted.length,
         failed: failed.length,
       },
@@ -139,36 +170,25 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const symbol = String(searchParams.get("symbol") || "BTC").toUpperCase();
-    const timeframe = String(
-      searchParams.get("timeframe") || "24H",
+    const supported = await getAvailableSymbols({ limit: 200 });
+    const requestedSymbol = String(
+      searchParams.get("symbol") || supported[0] || DEFAULT_SYMBOLS[0],
     ).toUpperCase();
+    const timeframe = normalizeTimeframe(searchParams.get("timeframe"));
     const rawQuote = String(searchParams.get("quote") || "USD").toUpperCase();
     const quote: QuoteCurrency = rawQuote === "EUR" ? "EUR" : "USD";
 
-    if (!COINLORE_IDS[symbol]) {
-      return NextResponse.json(
-        { error: "Unsupported symbol. Use BTC, ETH, or XRP." },
-        { status: 400 },
-      );
-    }
-
-    if (!TIMEFRAME_TO_WINDOW_MS[timeframe]) {
-      return NextResponse.json(
-        {
-          error:
-            "Unsupported timeframe. Use 1M, 5M, 30MIN, 1H, 24H, 7D, 30D, or 1Y.",
-        },
-        { status: 400 },
-      );
-    }
+    const allowed = supported.length > 0 ? supported : DEFAULT_SYMBOLS;
+    const symbol = allowed.includes(requestedSymbol)
+      ? requestedSymbol
+      : allowed[0] || DEFAULT_SYMBOLS[0];
 
     let inserted;
     try {
       inserted = await fetchAndPersistSymbol(symbol);
     } catch {
       return NextResponse.json(
-        { error: "CoinLore returned an invalid ticker response." },
+        { error: "Uphold returned an invalid ticker response." },
         { status: 503 },
       );
     }
