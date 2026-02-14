@@ -176,6 +176,9 @@ export default function SuperpositionedGraph({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seriesMapRef = useRef<Map<string, ISeriesApi<any>>>(new Map());
   const chartTypeTrackerRef = useRef<string>(state.chartType);
+  // Track created price lines so we can remove them before re-creating
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const priceLinesRef = useRef<Map<string, any>>(new Map());
 
   // -- Snap-to-now visibility --
   const [showSnapToNow, setShowSnapToNow] = useState(false);
@@ -416,10 +419,15 @@ export default function SuperpositionedGraph({
       // Set data - all layers share the same timeScale automatically
       series.setData(data);
 
-      // Add entry price line if available
+      // Add entry price line if available (remove old one first to prevent stacking)
       const entryPrice = purchasePrices[layer.symbol];
+      const existingPriceLine = priceLinesRef.current.get(layer.symbol);
+      if (existingPriceLine) {
+        try { series.removePriceLine(existingPriceLine); } catch (_) { /* already removed */ }
+        priceLinesRef.current.delete(layer.symbol);
+      }
       if (entryPrice && layer.isPrimary) {
-        series.createPriceLine({
+        const priceLine = series.createPriceLine({
           price: entryPrice,
           color: "#FFD93D",
           lineWidth: 1,
@@ -427,6 +435,7 @@ export default function SuperpositionedGraph({
           axisLabelVisible: true,
           title: "ENTRY $" + entryPrice.toLocaleString(),
         });
+        priceLinesRef.current.set(layer.symbol, priceLine);
       }
     }
 
