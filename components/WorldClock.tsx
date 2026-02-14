@@ -100,9 +100,9 @@ export default function WorldClock() {
 
   return (
     <>
-      <div className="w-full border-4 border-gray-300 bg-black overflow-hidden font-mono">
+      <div className="w-full h-full border-4 border-gray-300 bg-black overflow-hidden font-mono flex flex-col">
         {/* Header */}
-        <div className="border-b-4 border-gray-300 px-4 py-3 flex items-center justify-between bg-black">
+        <div className="border-b-4 border-gray-300 px-4 py-3 flex items-center justify-between bg-black flex-shrink-0">
           <div className="flex items-center gap-2">
             <motion.div
               className="w-2 h-2 bg-[#DD0000]"
@@ -126,7 +126,7 @@ export default function WorldClock() {
           axis="y"
           values={selectedClocks}
           onReorder={setSelectedClocks}
-          className="max-h-[300px] overflow-y-auto custom-scrollbar"
+          className="flex-1 overflow-y-auto custom-scrollbar min-h-0"
         >
           {selectedClocks.map((clock, index) => (
             <Reorder.Item

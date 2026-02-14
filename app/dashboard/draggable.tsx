@@ -325,7 +325,7 @@ export default function DraggableWarRoom() {
               )}
             </div>
 
-            <div className="relative h-[calc(100%-3rem)]">
+            <div className="relative h-[calc(100%-3rem)] min-h-0">
               <PriceChartSVG
                 histories={priceHistories}
                 selectedSymbols={selectedChartSymbols}
@@ -434,6 +434,20 @@ export default function DraggableWarRoom() {
         sm: { i: "holdings", x: 0, y: 36, w: 6, h: 6, minW: 3, minH: 4 },
         xs: { i: "holdings", x: 0, y: 42, w: 4, h: 6, minW: 3, minH: 4 }
       }
+    },
+    {
+      id: "world-clock",
+      component: (
+        <DashboardPanel title="WORLD CLOCK">
+          <WorldClock />
+        </DashboardPanel>
+      ),
+      defaultLayout: {
+        lg: { i: "world-clock", x: 8, y: 14, w: 4, h: 6, minW: 3, minH: 4 },
+        md: { i: "world-clock", x: 7, y: 14, w: 3, h: 6, minW: 3, minH: 4 },
+        sm: { i: "world-clock", x: 0, y: 28, w: 6, h: 6, minW: 3, minH: 4 },
+        xs: { i: "world-clock", x: 0, y: 48, w: 4, h: 6, minW: 3, minH: 4 }
+      }
     }
   ];
 
@@ -527,8 +541,6 @@ export default function DraggableWarRoom() {
           </span>
         </div>
       </footer>
-
-      <WorldClock />
 
       <HoldingsTradeModal
         request={pendingHoldingsTrade}

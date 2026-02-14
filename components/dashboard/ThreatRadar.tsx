@@ -171,12 +171,13 @@ export default function ThreatRadar({
       </div>
 
       {/* Radar SVG */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center p-4 min-h-0">
         <motion.svg
-          width={size}
-          height={size}
+          width="100%"
+          height="100%"
           viewBox={`-10 -10 ${size + 20} ${size + 20}`}
-          className="max-w-full"
+          className="max-w-full max-h-full"
+          preserveAspectRatio="xMidYMid meet"
           animate={pulse ? { scale: [1, 1.02, 1] } : {}}
           transition={pulse ? { repeat: Infinity, duration: 0.5 } : {}}
         >

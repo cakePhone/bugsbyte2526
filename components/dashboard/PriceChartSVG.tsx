@@ -88,7 +88,8 @@ export default function PriceChartSVG({
       width="100%"
       height="100%"
       viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid meet"
+      className="max-w-full max-h-full"
     >
       {[0.25, 0.5, 0.75].map((pct) => {
         const y = pad + pct * (h - 2 * pad);
