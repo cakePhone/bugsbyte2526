@@ -1,11 +1,9 @@
 "use client";
 
-import WorldClock from "./WorldClock";
-
 /**
  * WAR ROOM FOOTER — V5 Tactical Intelligence
  * 
- * Bottom bar with localized world clock.
+ * Bottom bar with status indicators.
  * Brutalist design with 4px borders.
  */
 
@@ -54,9 +52,6 @@ export default function WarRoomFooter({
           GEISHA GAINS • WAR ROOM V5
         </span>
       </div>
-
-      {/* Right Side - World Clock */}
-      <WorldClock position="right" />
     </footer>
   );
 }

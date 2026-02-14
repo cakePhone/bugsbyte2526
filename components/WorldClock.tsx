@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, Reorder } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ClockData {
   id: string;
@@ -11,28 +11,28 @@ interface ClockData {
 }
 
 const WORLD_TIMEZONES: ClockData[] = [
-  { id: "local", city: "Local Time", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, country: "Local" },
-  { id: "us-ny", city: "New York", timezone: "America/New_York", country: "USA" },
-  { id: "us-la", city: "Los Angeles", timezone: "America/Los_Angeles", country: "USA" },
+  { id: "local", city: "Local", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, country: "Local" },
+  { id: "us-ny", city: "NYC", timezone: "America/New_York", country: "USA" },
+  { id: "us-la", city: "LA", timezone: "America/Los_Angeles", country: "USA" },
   { id: "us-chi", city: "Chicago", timezone: "America/Chicago", country: "USA" },
-  { id: "uk", city: "London", timezone: "Europe/London", country: "United Kingdom" },
+  { id: "uk", city: "London", timezone: "Europe/London", country: "UK" },
   { id: "fr", city: "Paris", timezone: "Europe/Paris", country: "France" },
   { id: "de", city: "Berlin", timezone: "Europe/Berlin", country: "Germany" },
   { id: "jp", city: "Tokyo", timezone: "Asia/Tokyo", country: "Japan" },
   { id: "cn", city: "Shanghai", timezone: "Asia/Shanghai", country: "China" },
-  { id: "hk", city: "Hong Kong", timezone: "Asia/Hong_Kong", country: "Hong Kong" },
+  { id: "hk", city: "HK", timezone: "Asia/Hong_Kong", country: "Hong Kong" },
   { id: "sg", city: "Singapore", timezone: "Asia/Singapore", country: "Singapore" },
   { id: "in", city: "Mumbai", timezone: "Asia/Kolkata", country: "India" },
   { id: "au-syd", city: "Sydney", timezone: "Australia/Sydney", country: "Australia" },
   { id: "au-mel", city: "Melbourne", timezone: "Australia/Melbourne", country: "Australia" },
-  { id: "nz", city: "Auckland", timezone: "Pacific/Auckland", country: "New Zealand" },
+  { id: "nz", city: "Auckland", timezone: "Pacific/Auckland", country: "NZ" },
   { id: "br", city: "São Paulo", timezone: "America/Sao_Paulo", country: "Brazil" },
-  { id: "mx", city: "Mexico City", timezone: "America/Mexico_City", country: "Mexico" },
+  { id: "mx", city: "Mexico", timezone: "America/Mexico_City", country: "Mexico" },
   { id: "ca", city: "Toronto", timezone: "America/Toronto", country: "Canada" },
   { id: "ru", city: "Moscow", timezone: "Europe/Moscow", country: "Russia" },
   { id: "ae", city: "Dubai", timezone: "Asia/Dubai", country: "UAE" },
-  { id: "za", city: "Johannesburg", timezone: "Africa/Johannesburg", country: "South Africa" },
-  { id: "kr", city: "Seoul", timezone: "Asia/Seoul", country: "South Korea" },
+  { id: "za", city: "Joburg", timezone: "Africa/Johannesburg", country: "SA" },
+  { id: "kr", city: "Seoul", timezone: "Asia/Seoul", country: "S Korea" },
   { id: "es", city: "Madrid", timezone: "Europe/Madrid", country: "Spain" },
   { id: "it", city: "Rome", timezone: "Europe/Rome", country: "Italy" },
   { id: "nl", city: "Amsterdam", timezone: "Europe/Amsterdam", country: "Netherlands" },
@@ -44,6 +44,7 @@ export default function WorldClock() {
   const [selectedClocks, setSelectedClocks] = useState<ClockData[]>([WORLD_TIMEZONES[0]]); // Start with local time
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,23 +54,78 @@ export default function WorldClock() {
     return () => clearInterval(timer);
   }, []);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showAddModal) return; // Don't handle keys when modal is open
+      
+      if (selectedIndex === null && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        // Select first clock if none selected
+        setSelectedIndex(0);
+        e.preventDefault();
+        return;
+      }
+
+      if (selectedIndex === null) return;
+
+      const cols = 2; // 2 columns in grid
+      const totalClocks = selectedClocks.length;
+
+      switch (e.key) {
+        case "ArrowUp":
+          if (selectedIndex >= cols) {
+            // Swap with clock above
+            moveClockPosition(selectedIndex, selectedIndex - cols);
+          }
+          e.preventDefault();
+          break;
+        case "ArrowDown":
+          if (selectedIndex + cols < totalClocks) {
+            // Swap with clock below
+            moveClockPosition(selectedIndex, selectedIndex + cols);
+          }
+          e.preventDefault();
+          break;
+        case "ArrowLeft":
+          if (selectedIndex > 0 && selectedIndex % cols !== 0) {
+            // Move within same row
+            moveClockPosition(selectedIndex, selectedIndex - 1);
+          }
+          e.preventDefault();
+          break;
+        case "ArrowRight":
+          if (selectedIndex < totalClocks - 1 && (selectedIndex + 1) % cols !== 0) {
+            // Move within same row
+            moveClockPosition(selectedIndex, selectedIndex + 1);
+          }
+          e.preventDefault();
+          break;
+        case "Escape":
+          setSelectedIndex(null);
+          e.preventDefault();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, selectedClocks, showAddModal]);
+
   const formatTime = (timezone: string) => {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
+      hour12: false,
     }).format(currentTime);
   };
 
-  const formatDate = (timezone: string) => {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(currentTime);
+  const moveClockPosition = (fromIndex: number, toIndex: number) => {
+    const newClocks = [...selectedClocks];
+    const [moved] = newClocks.splice(fromIndex, 1);
+    newClocks.splice(toIndex, 0, moved);
+    setSelectedClocks(newClocks);
+    setSelectedIndex(toIndex);
   };
 
   const addClock = (clock: ClockData) => {
@@ -78,8 +134,14 @@ export default function WorldClock() {
     }
   };
 
-  const removeClock = (clockId: string) => {
-    setSelectedClocks(selectedClocks.filter((c) => c.id !== clockId));
+  const removeClock = (clockId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (selectedClocks.length > 1) {
+      setSelectedClocks(selectedClocks.filter((c) => c.id !== clockId));
+      setSelectedIndex(null);
+    }
   };
 
   const toggleClock = (clock: ClockData) => {
@@ -88,8 +150,6 @@ export default function WorldClock() {
       removeClock(clock.id);
     } else {
       addClock(clock);
-      setShowAddModal(false);
-      setSearchQuery("");
     }
   };
 
@@ -100,96 +160,110 @@ export default function WorldClock() {
 
   return (
     <>
-      <div className="w-full border-4 border-gray-300 bg-black overflow-hidden font-mono">
+      <div className="w-full border-4 border-gray-300 bg-black font-mono">
         {/* Header */}
-        <div className="border-b-4 border-gray-300 px-4 py-3 flex items-center justify-between bg-black">
+        <div className="border-b-4 border-gray-300 px-3 py-1.5 flex items-center justify-between bg-black">
           <div className="flex items-center gap-2">
-            <motion.div
-              className="w-2 h-2 bg-[#DD0000]"
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-            />
-            <h3 className="text-white font-bold text-[11px] uppercase tracking-widest">
+            <h3 className="text-white font-bold text-[9px] uppercase tracking-widest">
               World Clocks
             </h3>
+            {selectedIndex !== null && (
+              <span className="text-[#FF0000] text-[7px] font-bold uppercase">
+                [ESC TO DESELECT]
+              </span>
+            )}
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="border-2 border-gray-300 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
+            className="border-2 border-gray-300 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors"
           >
             + ADD
           </button>
         </div>
 
-        {/* Clock List */}
-        <Reorder.Group
-          axis="y"
-          values={selectedClocks}
-          onReorder={setSelectedClocks}
-          className="max-h-[300px] overflow-y-auto custom-scrollbar"
-        >
-          {selectedClocks.map((clock, index) => (
-            <Reorder.Item
-              key={clock.id}
-              value={clock}
-              className={`px-4 py-4 ${index !== selectedClocks.length - 1 ? 'border-b-2 border-gray-800' : ''} hover:bg-[#1A1A1A] transition-colors group cursor-move`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2 mr-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                  <svg 
-                    width="12" 
-                    height="16" 
-                    viewBox="0 0 12 16" 
-                    fill="none" 
-                    className="text-gray-300"
-                  >
-                    <circle cx="3" cy="4" r="1.5" fill="currentColor"/>
-                    <circle cx="9" cy="4" r="1.5" fill="currentColor"/>
-                    <circle cx="3" cy="8" r="1.5" fill="currentColor"/>
-                    <circle cx="9" cy="8" r="1.5" fill="currentColor"/>
-                    <circle cx="3" cy="12" r="1.5" fill="currentColor"/>
-                    <circle cx="9" cy="12" r="1.5" fill="currentColor"/>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-white font-bold text-[12px] uppercase tracking-wide">
-                      {clock.city}
-                    </h4>
+        {/* Clock Grid - Square tiles that stack */}
+        <div className="p-1.5 grid grid-cols-2 gap-1.5">
+          <AnimatePresence mode="popLayout">
+            {selectedClocks.map((clock, index) => {
+              const isSelected = selectedIndex === index;
+              const canRemove = selectedClocks.length > 1;
+              return (
+                <motion.div
+                  key={clock.id}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => setSelectedIndex(index)}
+                  className={`aspect-square border-2 bg-[#1A1A1A] transition-all cursor-pointer group relative overflow-hidden ${
+                    isSelected 
+                      ? "border-[#FF0000] ring-2 ring-[#FF0000]/50" 
+                      : "border-gray-700 hover:border-gray-500"
+                  }`}
+                >
+                  {/* Remove button - shows on hover */}
+                  {canRemove && (
                     <button
-                      onClick={() => removeClock(clock.id)}
-                      className="opacity-0 group-hover:opacity-100 text-[#DD0000] hover:text-white text-[11px] font-bold transition-opacity border border-transparent hover:border-gray-300 px-1"
+                      onClick={(e) => removeClock(clock.id, e)}
+                      className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#DD0000] text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-[#FF0000] transition-opacity z-10"
+                      title="Remove clock"
                     >
                       ✕
                     </button>
+                  )}
+
+                  {/* Clock content */}
+                  <div className="flex flex-col items-center justify-center h-full p-1">
+                    <div className="text-white text-base font-bold font-mono tracking-tight">
+                      {formatTime(clock.timezone)}
+                    </div>
+                    <div className="text-gray-300 text-[8px] uppercase tracking-wider font-bold text-center mt-0.5">
+                      {clock.city}
+                    </div>
                   </div>
-                  <p className="text-gray-300 text-[10px] uppercase tracking-wider mb-2">
-                    {clock.country}
-                  </p>
-                  <p className="text-white text-2xl font-bold font-mono tracking-tight">
-                    {formatTime(clock.timezone)}
-                  </p>
-                  <p className="text-gray-300 text-[10px] uppercase tracking-wider mt-1">
-                    {formatDate(clock.timezone)}
-                  </p>
-                </div>
-              </div>
-            </Reorder.Item>
-          ))}
-        </Reorder.Group>
+
+                  {/* Selection indicator */}
+                  {isSelected && (
+                    <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
+                      <div className="text-[#FF0000] text-[6px] font-bold uppercase tracking-wider">
+                        ↑ ↓ ← → MOVE
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        {/* Instructions footer */}
+        {selectedClocks.length > 0 && (
+          <div className="border-t-2 border-gray-800 px-2 py-1 bg-black">
+            <p className="text-[7px] text-gray-600 uppercase tracking-wide text-center">
+              Click to Select • Arrow Keys to Reorder • Hover & Click X to Remove
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Add Clock Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="border-4 border-gray-300 bg-black w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col font-mono">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="border-4 border-gray-300 bg-black w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col font-mono"
+          >
             {/* Modal Header */}
             <div className="border-b-4 border-gray-300 px-6 py-3 flex items-center justify-between bg-black">
               <h2 className="text-white font-bold text-sm uppercase tracking-widest">
                 Add World Clock
               </h2>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSearchQuery("");
+                }}
                 className="border-2 border-gray-300 text-white hover:bg-white hover:text-black w-7 h-7 flex items-center justify-center transition-colors font-bold text-sm"
               >
                 ✕
@@ -207,43 +281,47 @@ export default function WorldClock() {
               />
             </div>
 
-            {/* Timezone List */}
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {/* Timezone Grid */}
+            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {filteredTimezones.map((clock) => {
-                  const isSelected = selectedClocks.find((c) => c.id === clock.id);
+                  const isAlreadyAdded = !!selectedClocks.find((c) => c.id === clock.id);
+                  const isLastClock = isAlreadyAdded && selectedClocks.length === 1;
                   return (
                     <button
                       key={clock.id}
                       onClick={() => toggleClock(clock)}
+                      disabled={isLastClock}
                       className={`text-left p-3 border-2 transition-all ${
-                        isSelected
-                          ? "bg-[#DD0000]/20 border-[#DD0000] hover:border-gray-300 hover:bg-[#DD0000]/30"
+                        isAlreadyAdded
+                          ? isLastClock
+                            ? "bg-[#DD0000]/10 border-[#DD0000] opacity-40 cursor-not-allowed"
+                            : "bg-[#DD0000]/20 border-[#DD0000] hover:border-white hover:bg-[#DD0000]/30"
                           : "bg-[#1A1A1A] border-gray-700 hover:border-gray-300 hover:bg-black"
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-white font-bold text-[11px] uppercase tracking-wide mb-1">
-                            {clock.city}
-                          </h3>
-                          <p className="text-gray-300 text-[9px] uppercase tracking-wider mb-2">
-                            {clock.country}
-                          </p>
-                          <p className="text-white text-base font-bold font-mono tracking-tight">
-                            {formatTime(clock.timezone)}
-                          </p>
+                      <h3 className="text-white font-bold text-[11px] uppercase tracking-wide mb-1">
+                        {clock.city}
+                      </h3>
+                      <p className="text-gray-300 text-[9px] uppercase tracking-wider mb-2">
+                        {clock.country}
+                      </p>
+                      <p className="text-white text-base font-bold font-mono tracking-tight">
+                        {formatTime(clock.timezone)}
+                      </p>
+                      {isAlreadyAdded && (
+                        <div className="mt-2">
+                          <span className={`text-xs font-bold ${isLastClock ? "text-gray-500" : "text-[#DD0000]"}`}>
+                            {isLastClock ? "✓ REQUIRED" : "✓ CLICK TO REMOVE"}
+                          </span>
                         </div>
-                        {isSelected && (
-                          <span className="text-[#DD0000] text-lg font-bold">✓</span>
-                        )}
-                      </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 
