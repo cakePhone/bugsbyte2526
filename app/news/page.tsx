@@ -12,14 +12,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import NewsBureau, { type NewsArticle } from "@/components/dashboard/NewsBureau";
 import WarRoomFooter from "@/components/dashboard/WarRoomFooter";
-import useDashboardData from "@/app/dashboard/hooks/useDashboardData";
+import { useLightweightAuth } from "@/app/dashboard/hooks/useLightweightAuth";
 import type { NewsAnalysisResponse } from "@/lib/nvidia-nim";
 
 type NewsCategory = "all" | "bitcoin" | "defi" | "breaking";
 
 export default function NewsPage() {
   const router = useRouter();
-  const { holdings, profile } = useDashboardData(router);
+  const { holdings, profile, authChecked } = useLightweightAuth(router);
 
   // News state
   const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -59,6 +59,8 @@ export default function NewsPage() {
 
   // Initial fetch and auto-refresh every 2 minutes
   useEffect(() => {
+    if (!authChecked) return;
+    
     fetchNews(category);
     
     const interval = setInterval(() => {
@@ -66,7 +68,7 @@ export default function NewsPage() {
     }, 120000); // 2 minutes
     
     return () => clearInterval(interval);
-  }, [category, fetchNews]);
+  }, [category, fetchNews, authChecked]);
 
   // Get user holdings as array
   const userHoldings = useMemo(() => 
@@ -76,9 +78,8 @@ export default function NewsPage() {
     [holdings]
   );
 
-  // Get risk profile
-  const riskProfile = ((profile as { preferences?: { riskProfile?: string } })?.preferences?.riskProfile || "MODERATE") as 
-    "CONSERVATIVE" | "MODERATE" | "AGGRESSIVE";
+  // Get risk profile from auth hook
+  const riskProfile = profile.risk_tolerance;
 
   // Analyze article with NVIDIA NIM
   const handleAnalyzeArticle = async (article: NewsArticle): Promise<NewsAnalysisResponse> => {
@@ -116,6 +117,20 @@ export default function NewsPage() {
   const handleRefresh = () => {
     fetchNews(category);
   };
+
+  // Show loading screen while auth is being checked
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent mx-auto mb-4 animate-spin" />
+          <div className="text-white font-mono text-sm uppercase tracking-widest animate-pulse">
+            LOADING NEWS BUREAU...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#121212] text-white font-mono flex flex-col">

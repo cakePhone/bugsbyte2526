@@ -18,8 +18,11 @@ import IntelligenceExchangeBar, {
   generateMockExchangeQuotes,
 } from "@/components/dashboard/IntelligenceExchangeBar";
 import ArbitrageBulletin from "@/components/dashboard/ArbitrageBulletin";
+<<<<<<< HEAD
 import TacticalPlanModal from "@/components/dashboard/TacticalPlanModal";
+=======
 import PriceAlertPanel from "@/components/dashboard/PriceAlertPanel";
+>>>>>>> 4735237b03a757746f01dcb742ea36bc109892ed
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
