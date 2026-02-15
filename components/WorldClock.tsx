@@ -111,6 +111,20 @@ export default function WorldClock() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex, selectedClocks, showAddModal]);
 
+  // ESC key to close modal
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showAddModal) {
+        setShowAddModal(false);
+        setSearchQuery("");
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscapeKey);
+    return () => window.removeEventListener("keydown", handleEscapeKey);
+  }, [showAddModal]);
+
   const formatTime = (timezone: string) => {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,

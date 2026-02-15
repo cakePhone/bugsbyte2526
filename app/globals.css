@@ -67,19 +67,19 @@ html {
 
 /* ── Font Size Variants ──────────────────────────────────── */
 html[data-font-size="very-small"] {
-  font-size: 12px;
+  font-size: 15px;
 }
 
 html[data-font-size="small"] {
-  font-size: 14px;
+  font-size: 17px;
 }
 
 html[data-font-size="normal"] {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 html[data-font-size="big"] {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 body {
@@ -88,7 +88,8 @@ body {
   background-color: #121212;
   color: #FFFFFF;
   font-family: var(--font-mono);
-  line-height: 1.5;
+  font-size: 20px;
+  line-height: 1.6;
   overflow-x: hidden;
 }
 
