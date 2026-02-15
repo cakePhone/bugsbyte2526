@@ -67,12 +67,14 @@ export default function BaseOfOperations() {
   const [pwLoading, setPwLoading] = useState(false);
 
   // Strategy
-  const [strategy, setStrategy] = useState<RiskProfile>({
+  const INITIAL_STRATEGY: RiskProfile = {
     risk_tolerance: "MODERATE",
     investment_horizon: "SWING",
     focus_sectors: ["CRYPTO"],
     geopolitical_sensitivity: "AWARE",
-  });
+  };
+
+  const [strategy, setStrategy] = useState<RiskProfile>(INITIAL_STRATEGY);
   const [stratMsg, setStratMsg] = useState<{
     text: string;
     error: boolean;
@@ -106,7 +108,14 @@ export default function BaseOfOperations() {
         }
         setUserEmail(user.email);
         if (user.riskProfile) {
-          setStrategy(user.riskProfile as RiskProfile);
+          // Merge user's risk profile with defaults to ensure required fields exist
+          setStrategy(
+            (prev) =>
+              ({
+                ...INITIAL_STRATEGY,
+                ...(user.riskProfile as Partial<RiskProfile>),
+              }) as RiskProfile,
+          );
         }
         if (user.preferences?.valuation_currency === "EUR") {
           setValuationCurrency("EUR");
@@ -124,10 +133,15 @@ export default function BaseOfOperations() {
         }
 
         // Load font size preference from localStorage
-        const savedFontSize = localStorage.getItem("geisha_font_size") as FontSize;
+        const savedFontSize = localStorage.getItem(
+          "geisha_font_size",
+        ) as FontSize;
         if (savedFontSize) {
           setFontSize(savedFontSize);
-          document.documentElement.setAttribute("data-font-size", savedFontSize);
+          document.documentElement.setAttribute(
+            "data-font-size",
+            savedFontSize,
+          );
         } else {
           // Set default to very-small
           document.documentElement.setAttribute("data-font-size", "very-small");
@@ -228,32 +242,37 @@ export default function BaseOfOperations() {
   const handleSelectAccount = async (email: string) => {
     setSwitchingAccount(email);
     setSwitchError(null);
-    
+
     // Try to login with stored credentials if available
     const storedCreds = localStorage.getItem(`creds_${email}`);
     if (!storedCreds) {
-      setSwitchError("No stored credentials for this account. Please login manually.");
+      setSwitchError(
+        "No stored credentials for this account. Please login manually.",
+      );
       setSwitchingAccount(null);
       return;
     }
-    
+
     try {
       const { password } = JSON.parse(storedCreds);
-      
+
       // Logout current user first
       await fetch("/api/auth/logout", { method: "POST" });
-      
+
       // Login with new account
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.user?.riskProfile) {
-          localStorage.setItem("geisha_risk_profile", JSON.stringify(data.user.riskProfile));
+          localStorage.setItem(
+            "geisha_risk_profile",
+            JSON.stringify(data.user.riskProfile),
+          );
         }
         setShowAccountModal(false);
         setSwitchingAccount(null);
@@ -291,9 +310,9 @@ export default function BaseOfOperations() {
   const toggleSector = (val: string) => {
     setStrategy((prev) => ({
       ...prev,
-      focus_sectors: prev.focus_sectors.includes(val)
-        ? prev.focus_sectors.filter((v) => v !== val)
-        : [...prev.focus_sectors, val],
+      focus_sectors: (prev.focus_sectors || []).includes(val)
+        ? (prev.focus_sectors || []).filter((v) => v !== val)
+        : [...(prev.focus_sectors || []), val],
     }));
   };
 
@@ -309,8 +328,14 @@ export default function BaseOfOperations() {
           </div>
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-white animate-ping"></div>
-            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-white animate-ping" style={{ animationDelay: '0.4s' }}></div>
+            <div
+              className="w-2 h-2 bg-white animate-ping"
+              style={{ animationDelay: "0.2s" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-white animate-ping"
+              style={{ animationDelay: "0.4s" }}
+            ></div>
           </div>
         </div>
       </div>
@@ -372,7 +397,10 @@ export default function BaseOfOperations() {
               })}
             </div>
             <div className="text-xs text-gray-300 mt-2">
-              {">"}  CURRENT: <span className="text-white font-bold">{fontSize.toUpperCase()}</span>
+              {">"} CURRENT:{" "}
+              <span className="text-white font-bold">
+                {fontSize.toUpperCase()}
+              </span>
             </div>
           </div>
         </div>
@@ -386,7 +414,8 @@ export default function BaseOfOperations() {
           </div>
           <div className="p-4 space-y-3">
             <div className="text-xs text-gray-300 mb-4">
-              {">"}  CURRENTLY LOGGED IN AS: <span className="text-white font-bold">{userEmail}</span>
+              {">"} CURRENTLY LOGGED IN AS:{" "}
+              <span className="text-white font-bold">{userEmail}</span>
             </div>
             <button
               onClick={handleManageAccounts}
@@ -478,7 +507,9 @@ export default function BaseOfOperations() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {FOCUS_SECTORS.map((opt) => {
-                  const selected = strategy.focus_sectors.includes(opt.value);
+                  const selected = (strategy.focus_sectors || []).includes(
+                    opt.value,
+                  );
                   return (
                     <button
                       key={opt.value}
@@ -620,105 +651,109 @@ export default function BaseOfOperations() {
               className="bg-[#121212] border-4 border-gray-300 p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b-4 border-gray-300 pb-4 mb-6">
-              <h2 className="text-2xl font-bold text-white tracking-widest uppercase">
-                ALL ACCOUNTS
-              </h2>
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b-4 border-gray-300 pb-4 mb-6">
+                <h2 className="text-2xl font-bold text-white tracking-widest uppercase">
+                  ALL ACCOUNTS
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAccountModal(false);
+                    setSwitchError(null);
+                  }}
+                  className="text-gray-300 hover:text-white text-2xl font-bold transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {switchError && (
+                <div className="mb-4 border-2 border-[#DD0000] bg-black p-3">
+                  <div className="text-[#DD0000] text-xs font-bold">
+                    {">"} ERROR: {switchError}
+                  </div>
+                </div>
+              )}
+
+              {/* Accounts List */}
+              <div className="space-y-4">
+                {accounts.length > 0 ? (
+                  <>
+                    <div className="text-xs text-gray-300 uppercase tracking-widest mb-3">
+                      SAVED ACCOUNTS ({accounts.length})
+                    </div>
+                    {accounts.map((email) => (
+                      <div
+                        key={email}
+                        className="border-2 border-gray-300 bg-black p-4 flex items-center justify-between hover:border-white transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-[#DD0000]"></div>
+                          <span className="text-white font-mono text-sm">
+                            {email}
+                            {email === userEmail && (
+                              <span className="text-xs text-[#DD0000] ml-2">
+                                (CURRENT)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          {email !== userEmail && (
+                            <button
+                              onClick={() => handleSelectAccount(email)}
+                              disabled={switchingAccount === email}
+                              className="border-2 border-gray-300 text-gray-300 px-3 py-1 text-xs font-bold tracking-widest hover:border-white hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {switchingAccount === email
+                                ? "SWITCHING..."
+                                : "SWITCH TO"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRemoveAccount(email)}
+                            disabled={switchingAccount === email}
+                            className="border-2 border-[#DD0000] text-[#DD0000] px-3 py-1 text-xs font-bold tracking-widest hover:bg-[#DD0000] hover:text-white transition-colors disabled:opacity-50"
+                          >
+                            REMOVE
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="border-2 border-gray-300 bg-black p-8 text-center">
+                    <div className="text-gray-300 text-sm font-mono">
+                      NO SAVED ACCOUNTS
+                    </div>
+                    <div className="text-xs text-gray-300 mt-2">
+                      Only the current account is available
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Operator Button */}
+              <button
+                onClick={handleAddOperator}
+                className="w-full mt-6 border-4 border-[#DD0000] bg-[#121212] text-[#DD0000] px-6 py-4 font-bold text-sm tracking-widest hover:bg-[#DD0000] hover:text-white transition-all"
+              >
+                + ADD OPERATOR
+              </button>
+
+              {/* Close Button */}
               <button
                 onClick={() => {
                   setShowAccountModal(false);
                   setSwitchError(null);
                 }}
-                className="text-gray-300 hover:text-white text-2xl font-bold transition-colors"
+                className="w-full mt-3 border-2 border-gray-300 bg-transparent text-gray-300 px-6 py-3 font-bold text-xs tracking-widest hover:border-white hover:text-white transition-all"
               >
-                ×
+                CLOSE
               </button>
-            </div>
-
-            {/* Error Message */}
-            {switchError && (
-              <div className="mb-4 border-2 border-[#DD0000] bg-black p-3">
-                <div className="text-[#DD0000] text-xs font-bold">
-                  {">"} ERROR: {switchError}
-                </div>
-              </div>
-            )}
-
-            {/* Accounts List */}
-            <div className="space-y-4">
-              {accounts.length > 0 ? (
-                <>
-                  <div className="text-xs text-gray-300 uppercase tracking-widest mb-3">
-                    SAVED ACCOUNTS ({accounts.length})
-                  </div>
-                  {accounts.map((email) => (
-                    <div
-                      key={email}
-                      className="border-2 border-gray-300 bg-black p-4 flex items-center justify-between hover:border-white transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-[#DD0000]"></div>
-                        <span className="text-white font-mono text-sm">
-                          {email}
-                          {email === userEmail && (
-                            <span className="text-xs text-[#DD0000] ml-2">(CURRENT)</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {email !== userEmail && (
-                          <button
-                            onClick={() => handleSelectAccount(email)}
-                            disabled={switchingAccount === email}
-                            className="border-2 border-gray-300 text-gray-300 px-3 py-1 text-xs font-bold tracking-widest hover:border-white hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {switchingAccount === email ? "SWITCHING..." : "SWITCH TO"}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleRemoveAccount(email)}
-                          disabled={switchingAccount === email}
-                          className="border-2 border-[#DD0000] text-[#DD0000] px-3 py-1 text-xs font-bold tracking-widest hover:bg-[#DD0000] hover:text-white transition-colors disabled:opacity-50"
-                        >
-                          REMOVE
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div className="border-2 border-gray-300 bg-black p-8 text-center">
-                  <div className="text-gray-300 text-sm font-mono">
-                    NO SAVED ACCOUNTS
-                  </div>
-                  <div className="text-xs text-gray-300 mt-2">
-                    Only the current account is available
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Add Operator Button */}
-            <button
-              onClick={handleAddOperator}
-              className="w-full mt-6 border-4 border-[#DD0000] bg-[#121212] text-[#DD0000] px-6 py-4 font-bold text-sm tracking-widest hover:bg-[#DD0000] hover:text-white transition-all"
-            >
-              + ADD OPERATOR
-            </button>
-
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setShowAccountModal(false);
-                setSwitchError(null);
-              }}
-              className="w-full mt-3 border-2 border-gray-300 bg-transparent text-gray-300 px-6 py-3 font-bold text-xs tracking-widest hover:border-white hover:text-white transition-all"
-            >
-              CLOSE
-            </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
         )}
       </AnimatePresence>
     </div>
