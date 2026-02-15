@@ -19,6 +19,7 @@ import IntelligenceExchangeBar, {
 } from "@/components/dashboard/IntelligenceExchangeBar";
 import ArbitrageBulletin from "@/components/dashboard/ArbitrageBulletin";
 import TacticalPlanModal from "@/components/dashboard/TacticalPlanModal";
+import PriceAlertPanel from "@/components/dashboard/PriceAlertPanel";
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
@@ -328,7 +329,7 @@ function WarRoomContent() {
       style={{ gridTemplateColumns: "25% 75%" }}
     >
       {/* Left Sidebar - Tactical Holdings (25% width) */}
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full gap-4 p-4">
         <div className="flex-1 overflow-y-auto">
           <TacticalHoldings
             holdings={holdings}
@@ -342,6 +343,9 @@ function WarRoomContent() {
             onPlanRequest={handlePlanRequest}
             onSellRequest={handleSellRequest}
           />
+        </div>
+        <div className="flex-shrink-0">
+          <PriceAlertPanel />
         </div>
         <div className="flex-shrink-0">
           <WorldClock />
