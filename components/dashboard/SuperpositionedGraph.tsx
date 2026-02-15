@@ -8,6 +8,7 @@ import {
   LineStyle,
   LineSeries,
   AreaSeries,
+  CandlestickSeries,
   type IChartApi,
   type ISeriesApi,
   type Time,
@@ -58,9 +59,8 @@ const TIME_WINDOWS: { key: TimeWindow; label: string }[] = [
 ];
 
 const CHART_TYPES: { key: ChartType; label: string; icon: string }[] = [
-  { key: "LINE", label: "LINE", icon: "╱" },
+  { key: "LINE", label: "LINE", icon: "▲" },
   { key: "CANDLESTICK", label: "CANDLE", icon: "┃" },
-  { key: "MOUNTAIN", label: "MOUNTAIN", icon: "▲" },
 ];
 
 /** Full catalog of supported crypto assets */
@@ -149,6 +149,48 @@ function toLineData(points: PricePoint[]) {
     }
   }
   return deduped;
+}
+
+/**
+ * Convert PricePoint[] to candlestick data (OHLC format).
+ * Groups price points into time buckets and calculates OHLC for each bucket.
+ */
+function toCandlestickData(points: PricePoint[], bucketSizeSeconds: number = 900) {
+  const cleaned = points
+    .map((p) => ({ timestamp: Number(p.timestamp), price: Number(p.price) }))
+    .filter(
+      (p) =>
+        Number.isFinite(p.timestamp) && Number.isFinite(p.price) && p.price > 0,
+    )
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  if (cleaned.length === 0) return [];
+
+  // Group by time buckets
+  const buckets = new Map<number, number[]>();
+  for (const p of cleaned) {
+    const ts = p.timestamp > 1e12 ? Math.floor(p.timestamp / 1000) : p.timestamp;
+    const bucketTime = Math.floor(ts / bucketSizeSeconds) * bucketSizeSeconds;
+    if (!buckets.has(bucketTime)) {
+      buckets.set(bucketTime, []);
+    }
+    buckets.get(bucketTime)!.push(p.price);
+  }
+
+  // Convert buckets to OHLC candles
+  const candles: { time: Time; open: number; high: number; low: number; close: number }[] = [];
+  for (const [time, prices] of Array.from(buckets.entries()).sort((a, b) => a[0] - b[0])) {
+    if (prices.length === 0) continue;
+    candles.push({
+      time: time as Time,
+      open: prices[0],
+      high: Math.max(...prices),
+      low: Math.min(...prices),
+      close: prices[prices.length - 1],
+    });
+  }
+
+  return candles;
 }
 
 export default function SuperpositionedGraph({
@@ -350,7 +392,8 @@ export default function SuperpositionedGraph({
     const currentSeriesMap = seriesMapRef.current;
     const activeLayers = state.layers.filter((l) => l.visible);
     const activeSymbols = new Set(activeLayers.map((l) => l.symbol));
-    const isArea = state.chartType === "MOUNTAIN";
+    const isCandlestick = state.chartType === "CANDLESTICK";
+    const isArea = state.chartType === "LINE";
 
     // If chart type changed, remove all series and recreate
     if (chartTypeTrackerRef.current !== state.chartType) {
@@ -371,66 +414,95 @@ export default function SuperpositionedGraph({
 
     // Create or update series for each active layer
     for (const layer of activeLayers) {
-      const data = toLineData(priceHistories[layer.symbol] || []);
-      if (data.length < 2) continue;
-
       let series = currentSeriesMap.get(layer.symbol);
 
-      if (!series) {
-        if (isArea) {
-          series = chart.addSeries(AreaSeries, {
-            lineColor: layer.color,
-            topColor: layer.color + "33",
-            bottomColor: layer.color + "05",
-            lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle:
-              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
-            crosshairMarkerVisible: true,
-            crosshairMarkerRadius: 5,
-            crosshairMarkerBorderColor: "#FFFFFF",
-            crosshairMarkerBackgroundColor: layer.color,
+      if (isCandlestick) {
+        // Candlestick chart
+        const candleData = toCandlestickData(priceHistories[layer.symbol] || [], 900);
+        if (candleData.length < 1) continue;
+
+        if (!series) {
+          series = chart.addSeries(CandlestickSeries, {
+            upColor: "#22c55e",
+            downColor: "#ef5350",
+            borderVisible: true,
+            wickUpColor: "#22c55e",
+            wickDownColor: "#ef5350",
+            borderUpColor: "#22c55e",
+            borderDownColor: "#ef5350",
             priceScaleId: "right",
           });
+          currentSeriesMap.set(layer.symbol, series);
         } else {
-          series = chart.addSeries(LineSeries, {
-            color: layer.color,
-            lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle:
-              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
-            crosshairMarkerVisible: true,
-            crosshairMarkerRadius: 5,
-            crosshairMarkerBorderColor: "#FFFFFF",
-            crosshairMarkerBackgroundColor: layer.color,
-            priceScaleId: "right",
+          series.applyOptions({
+            upColor: "#22c55e",
+            wickUpColor: "#22c55e",
+            borderUpColor: "#22c55e",
           });
         }
 
-        currentSeriesMap.set(layer.symbol, series);
+        series.setData(candleData);
       } else {
-        // Update existing series options to reflect current layer color/style
-        if (isArea) {
-          series.applyOptions({
-            lineColor: layer.color,
-            topColor: layer.color + "33",
-            bottomColor: layer.color + "05",
-            lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle:
-              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
-            crosshairMarkerBackgroundColor: layer.color,
-          });
-        } else {
-          series.applyOptions({
-            color: layer.color,
-            lineWidth: layer.isPrimary ? 3 : 2,
-            lineStyle:
-              layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
-            crosshairMarkerBackgroundColor: layer.color,
-          });
-        }
-      }
+        // Line or Area chart
+        const data = toLineData(priceHistories[layer.symbol] || []);
+        if (data.length < 2) continue;
 
-      // Set data - all layers share the same timeScale automatically
-      series.setData(data);
+        if (!series) {
+          if (isArea) {
+            series = chart.addSeries(AreaSeries, {
+              lineColor: layer.color,
+              topColor: layer.color + "33",
+              bottomColor: layer.color + "05",
+              lineWidth: layer.isPrimary ? 3 : 2,
+              lineStyle:
+                layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+              crosshairMarkerVisible: true,
+              crosshairMarkerRadius: 5,
+              crosshairMarkerBorderColor: "#FFFFFF",
+              crosshairMarkerBackgroundColor: layer.color,
+              priceScaleId: "right",
+            });
+          } else {
+            series = chart.addSeries(LineSeries, {
+              color: layer.color,
+              lineWidth: layer.isPrimary ? 3 : 2,
+              lineStyle:
+                layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+              crosshairMarkerVisible: true,
+              crosshairMarkerRadius: 5,
+              crosshairMarkerBorderColor: "#FFFFFF",
+              crosshairMarkerBackgroundColor: layer.color,
+              priceScaleId: "right",
+            });
+          }
+
+          currentSeriesMap.set(layer.symbol, series);
+        } else {
+          // Update existing series options to reflect current layer color/style
+          if (isArea) {
+            series.applyOptions({
+              lineColor: layer.color,
+              topColor: layer.color + "33",
+              bottomColor: layer.color + "05",
+              lineWidth: layer.isPrimary ? 3 : 2,
+              lineStyle:
+                layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+              crosshairMarkerBackgroundColor: layer.color,
+            });
+          } else {
+            series.applyOptions({
+              color: layer.color,
+              lineWidth: layer.isPrimary ? 3 : 2,
+              lineStyle:
+                layer.lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid,
+              crosshairMarkerBackgroundColor: layer.color,
+            });
+          }
+        }
+
+        // Set data - all layers share the same timeScale automatically
+        series.setData(data);
+      }
 
       // Add entry price line if available (remove old one first to prevent stacking)
       const entryPrice = purchasePrices[layer.symbol];

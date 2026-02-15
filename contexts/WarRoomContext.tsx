@@ -48,7 +48,7 @@ export interface PurchaseMarker {
 }
 
 export type TimeWindow = "1H" | "1D" | "1W" | "1M";
-export type ChartType = "LINE" | "CANDLESTICK" | "MOUNTAIN";
+export type ChartType = "LINE" | "CANDLESTICK";
 
 export interface WarRoomState {
   // Superpositioned Layers
