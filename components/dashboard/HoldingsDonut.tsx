@@ -19,14 +19,26 @@ import {
 // ─── Color Map ───────────────────────────────────────────────────────
 
 const ASSET_COLORS: Record<string, string> = {
-  BTC: "#FFFFFF",
-  ETH: "#666666",
-  SOL: "#FF0000",
+  BTC: "#F7931A",   // Bitcoin orange
+  ETH: "#627EEA",   // Ethereum blue
+  SOL: "#9945FF",   // Solana purple
+  XRP: "#00AAE4",   // Ripple cyan
+  ADA: "#0033AD",   // Cardano blue
+  DOGE: "#C3A634",  // Doge gold
+  DOT: "#E6007A",   // Polkadot pink
+  AVAX: "#E84142",  // Avalanche red
+  LINK: "#2A5ADA",  // Chainlink blue
+  LTC: "#BFBBBB",   // Litecoin silver
+  MATIC: "#8247E5", // Polygon purple
+  USDT: "#26A17B",  // Tether green
+  USDC: "#2775CA",  // USDC blue
 };
-const OTHER_COLOR = "#00FF00";
 
-function getSliceColor(name: string): string {
-  return ASSET_COLORS[name] ?? OTHER_COLOR;
+// Fallback palette for assets not in the map
+const FALLBACK_COLORS = ["#FF4444", "#44FF44", "#FFAA00", "#FF00FF", "#00FFFF", "#FFFF00"];
+
+function getSliceColor(name: string, index?: number): string {
+  return ASSET_COLORS[name] ?? FALLBACK_COLORS[(index ?? 0) % FALLBACK_COLORS.length];
 }
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -41,72 +53,6 @@ interface SliceDatum {
   value: number;
   pct: string;
 }
-
-// ─── Custom label with polylines ─────────────────────────────────────
-
-const RADIAN = Math.PI / 180;
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function renderLabel(props: any) {
-  const {
-    cx,
-    cy,
-    midAngle,
-    outerRadius,
-    name,
-    pct,
-  } = props;
-
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-
-  // Point on the outer edge
-  const sx = cx + outerRadius * cos;
-  const sy = cy + outerRadius * sin;
-
-  // Extension point
-  const mx = cx + (outerRadius + 14) * cos;
-  const my = cy + (outerRadius + 14) * sin;
-
-  // End of horizontal leg
-  const ex = mx + (cos >= 0 ? 1 : -1) * 16;
-  const ey = my;
-
-  const anchor = cos >= 0 ? "start" : "end";
-
-  return (
-    <g>
-      {/* Polyline from slice → label */}
-      <polyline
-        points={`${sx},${sy} ${mx},${my} ${ex},${ey}`}
-        fill="none"
-        stroke="#555"
-        strokeWidth={1}
-      />
-      {/* Symbol */}
-      <text
-        x={ex + (cos >= 0 ? 4 : -4)}
-        y={ey - 4}
-        textAnchor={anchor}
-        fill="#FFFFFF"
-        style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 9, fontWeight: 900 }}
-      >
-        {name}
-      </text>
-      {/* Percentage */}
-      <text
-        x={ex + (cos >= 0 ? 4 : -4)}
-        y={ey + 8}
-        textAnchor={anchor}
-        fill="#888"
-        style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 8 }}
-      >
-        {pct}%
-      </text>
-    </g>
-  );
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -147,7 +93,7 @@ export default function HoldingsDonut({ holdingValues }: HoldingsDonutProps) {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={170}>
         <PieChart>
           <Pie
             data={data}
@@ -155,26 +101,26 @@ export default function HoldingsDonut({ holdingValues }: HoldingsDonutProps) {
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius={50}
-            outerRadius={70}
+            innerRadius={45}
+            outerRadius={65}
             paddingAngle={5}
             stroke="#000000"
             strokeWidth={2}
             isAnimationActive={true}
             animationDuration={300}
             animationEasing="ease"
-            label={renderLabel}
+            label={false}
             labelLine={false}
           >
             {data.map((entry, idx) => (
-              <Cell key={`cell-${idx}`} fill={getSliceColor(entry.name)} />
+              <Cell key={`cell-${idx}`} fill={getSliceColor(entry.name, idx)} />
             ))}
           </Pie>
 
           {/* Center label — rendered as custom SVG text */}
           <text
             x="50%"
-            y="47%"
+            y="44%"
             textAnchor="middle"
             dominantBaseline="central"
             fill="#666"
@@ -204,6 +150,24 @@ export default function HoldingsDonut({ holdingValues }: HoldingsDonutProps) {
           </text>
         </PieChart>
       </ResponsiveContainer>
+
+      {/* Legend — HTML, never clips */}
+      <div className="px-3 pt-1 pb-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
+        {data.map((entry, idx) => (
+          <div key={entry.name} className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-2.5 h-2.5 border border-white/20 shrink-0"
+              style={{ backgroundColor: getSliceColor(entry.name, idx) }}
+            />
+            <span className="text-[9px] font-mono font-black text-white uppercase tracking-wider">
+              {entry.name}
+            </span>
+            <span className="text-[9px] font-mono text-gray-500">
+              {entry.pct}%
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
