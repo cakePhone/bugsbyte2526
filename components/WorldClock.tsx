@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ClockData {
@@ -45,6 +45,62 @@ export default function WorldClock() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load saved clocks from API on mount
+  useEffect(() => {
+    const loadSavedClocks = async () => {
+      try {
+        const res = await fetch("/api/user/preferences");
+        if (res.ok) {
+          const data = await res.json();
+          const savedClockIds = data.preferences?.worldClocks as string[] | undefined;
+          if (savedClockIds && Array.isArray(savedClockIds) && savedClockIds.length > 0) {
+            // Rebuild clock objects from saved IDs
+            const clocks = savedClockIds
+              .map((id) => WORLD_TIMEZONES.find((tz) => tz.id === id))
+              .filter((c): c is ClockData => c !== undefined);
+            if (clocks.length > 0) {
+              setSelectedClocks(clocks);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load saved clocks:", error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadSavedClocks();
+  }, []);
+
+  // Save clocks to API (debounced)
+  const saveClocks = useCallback((clocks: ClockData[]) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await fetch("/api/user/preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            worldClocks: clocks.map((c) => c.id),
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to save clocks:", error);
+      }
+    }, 500); // Debounce 500ms
+  }, []);
+
+  // Save whenever selectedClocks changes (after initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      saveClocks(selectedClocks);
+    }
+  }, [selectedClocks, isLoaded, saveClocks]);
 
   useEffect(() => {
     const timer = setInterval(() => {
