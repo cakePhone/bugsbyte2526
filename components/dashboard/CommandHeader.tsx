@@ -138,7 +138,13 @@ export default function CommandHeader({ scanCount = 0, isScanning = false, avail
         </div>
 
         {/* Navigation Nodes - Right */}
-        <nav className="flex items-center h-full border-l-4 border-white">
+        <nav className="flex items-center h-full">
+          <Link
+            href="/fund"
+            className="h-full border-r-4 border-white px-4 flex items-center text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
+          >
+            [ FUND ]
+          </Link>
           <Link
             href="/settings"
             className="h-full border-r-4 border-white px-4 flex items-center text-xs font-black font-mono uppercase tracking-widest text-white hover:bg-[#FF0000] hover:text-white transition-colors"
