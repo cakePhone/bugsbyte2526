@@ -152,9 +152,9 @@ function toLineData(points: PricePoint[]) {
 
 /**
  * Convert PricePoint[] to candlestick data (OHLC format).
- * Groups price points into time buckets and calculates OHLC for each bucket.
+ * Automatically calculates optimal bucket size based on data range to produce ~30-50 candles.
  */
-function toCandlestickData(points: PricePoint[], bucketSizeSeconds: number = 900) {
+function toCandlestickData(points: PricePoint[]) {
   const cleaned = points
     .map((p) => ({ timestamp: Number(p.timestamp), price: Number(p.price) }))
     .filter(
@@ -165,11 +165,48 @@ function toCandlestickData(points: PricePoint[], bucketSizeSeconds: number = 900
 
   if (cleaned.length === 0) return [];
 
+  // Normalize timestamps to seconds
+  const normalized = cleaned.map(p => ({
+    timestamp: p.timestamp > 1e12 ? Math.floor(p.timestamp / 1000) : p.timestamp,
+    price: p.price
+  }));
+
+  // Calculate the data range and determine optimal bucket size
+  const minTime = normalized[0].timestamp;
+  const maxTime = normalized[normalized.length - 1].timestamp;
+  const dataRangeSeconds = maxTime - minTime;
+  
+  // Target ~40 candles, minimum bucket size of 60 seconds
+  const targetCandles = 40;
+  let bucketSizeSeconds = Math.max(60, Math.floor(dataRangeSeconds / targetCandles));
+  
+  // Round bucket size to nice intervals
+  if (bucketSizeSeconds < 300) {
+    bucketSizeSeconds = 60; // 1 minute
+  } else if (bucketSizeSeconds < 900) {
+    bucketSizeSeconds = 300; // 5 minutes
+  } else if (bucketSizeSeconds < 1800) {
+    bucketSizeSeconds = 900; // 15 minutes
+  } else if (bucketSizeSeconds < 3600) {
+    bucketSizeSeconds = 1800; // 30 minutes
+  } else if (bucketSizeSeconds < 7200) {
+    bucketSizeSeconds = 3600; // 1 hour
+  } else if (bucketSizeSeconds < 14400) {
+    bucketSizeSeconds = 7200; // 2 hours
+  } else if (bucketSizeSeconds < 21600) {
+    bucketSizeSeconds = 14400; // 4 hours
+  } else if (bucketSizeSeconds < 43200) {
+    bucketSizeSeconds = 21600; // 6 hours
+  } else if (bucketSizeSeconds < 86400) {
+    bucketSizeSeconds = 43200; // 12 hours
+  } else {
+    bucketSizeSeconds = 86400; // 1 day
+  }
+
   // Group by time buckets
   const buckets = new Map<number, number[]>();
-  for (const p of cleaned) {
-    const ts = p.timestamp > 1e12 ? Math.floor(p.timestamp / 1000) : p.timestamp;
-    const bucketTime = Math.floor(ts / bucketSizeSeconds) * bucketSizeSeconds;
+  for (const p of normalized) {
+    const bucketTime = Math.floor(p.timestamp / bucketSizeSeconds) * bucketSizeSeconds;
     if (!buckets.has(bucketTime)) {
       buckets.set(bucketTime, []);
     }
@@ -384,11 +421,15 @@ export default function SuperpositionedGraph({
   // ===================================================================
   // DATA SYNCHRONIZATION - Update series when layers/data change
   // ===================================================================
+  // Track which series type each symbol is using
+  const seriesTypeRef = useRef<Map<string, "candlestick" | "line" | "area">>(new Map());
+
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
     const currentSeriesMap = seriesMapRef.current;
+    const seriesTypeMap = seriesTypeRef.current;
     const activeLayers = state.layers.filter((l) => l.visible);
     const activeSymbols = new Set(activeLayers.map((l) => l.symbol));
     const isCandlestick = state.chartType === "CANDLESTICK";
@@ -401,6 +442,7 @@ export default function SuperpositionedGraph({
         chart.removeSeries(s);
       });
       currentSeriesMap.clear();
+      seriesTypeMap.clear();
     }
 
     // Remove series for layers that no longer exist
@@ -408,6 +450,7 @@ export default function SuperpositionedGraph({
       if (!activeSymbols.has(sym)) {
         chart.removeSeries(s);
         currentSeriesMap.delete(sym);
+        seriesTypeMap.delete(sym);
       }
     });
 
@@ -415,9 +458,22 @@ export default function SuperpositionedGraph({
     for (const layer of activeLayers) {
       let series = currentSeriesMap.get(layer.symbol);
 
-      if (isCandlestick) {
-        // Candlestick chart
-        const candleData = toCandlestickData(priceHistories[layer.symbol] || [], 900);
+      // Only render the primary/active layer as candlestick, others as lines
+      const shouldRenderCandlestick = isCandlestick && layer.isPrimary;
+      const requiredType = shouldRenderCandlestick ? "candlestick" : (isArea && !isCandlestick ? "area" : "line");
+      const currentType = seriesTypeMap.get(layer.symbol);
+
+      // If series type changed, remove old series and create new one
+      if (series && currentType !== requiredType) {
+        chart.removeSeries(series);
+        currentSeriesMap.delete(layer.symbol);
+        seriesTypeMap.delete(layer.symbol);
+        series = undefined;
+      }
+
+      if (shouldRenderCandlestick) {
+        // Candlestick chart (only for active/primary layer)
+        const candleData = toCandlestickData(priceHistories[layer.symbol] || []);
         if (candleData.length < 1) continue;
 
         if (!series) {
@@ -432,6 +488,7 @@ export default function SuperpositionedGraph({
             priceScaleId: "right",
           });
           currentSeriesMap.set(layer.symbol, series);
+          seriesTypeMap.set(layer.symbol, "candlestick");
         } else {
           series.applyOptions({
             upColor: "#22c55e",
@@ -442,12 +499,12 @@ export default function SuperpositionedGraph({
 
         series.setData(candleData);
       } else {
-        // Line or Area chart
+        // Line chart for non-primary layers (even in candlestick mode) or Area chart in LINE mode
         const data = toLineData(priceHistories[layer.symbol] || []);
         if (data.length < 2) continue;
 
         if (!series) {
-          if (isArea) {
+          if (isArea && !isCandlestick) {
             series = chart.addSeries(AreaSeries, {
               lineColor: layer.color,
               topColor: layer.color + "33",
@@ -461,6 +518,7 @@ export default function SuperpositionedGraph({
               crosshairMarkerBackgroundColor: layer.color,
               priceScaleId: "right",
             });
+            seriesTypeMap.set(layer.symbol, "area");
           } else {
             series = chart.addSeries(LineSeries, {
               color: layer.color,
@@ -473,12 +531,13 @@ export default function SuperpositionedGraph({
               crosshairMarkerBackgroundColor: layer.color,
               priceScaleId: "right",
             });
+            seriesTypeMap.set(layer.symbol, "line");
           }
 
           currentSeriesMap.set(layer.symbol, series);
         } else {
           // Update existing series options to reflect current layer color/style
-          if (isArea) {
+          if (isArea && !isCandlestick) {
             series.applyOptions({
               lineColor: layer.color,
               topColor: layer.color + "33",
@@ -536,7 +595,7 @@ export default function SuperpositionedGraph({
 
     // Fit content to show all data
     chart.timeScale().fitContent();
-  }, [state.layers, priceHistories, state.chartType, purchasePrices]);
+  }, [state.layers, priceHistories, state.chartType, state.timeWindow, purchasePrices]);
 
   // ===================================================================
   // SNAP-TO-NOW - scroll back to current price
