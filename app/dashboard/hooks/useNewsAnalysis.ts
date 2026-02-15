@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { NewsAnalysis } from "@/app/api/news/analyze/route";
 import type { RiskProfile } from "@/components/onboarding/TheInterrogation";
 import usePollingTask from "./usePollingTask";
@@ -24,6 +24,7 @@ export default function useNewsAnalysis({
   const [fatalEvents, setFatalEvents] = useState<
     Array<{ timestamp: number; headline: string }>
   >([]);
+  const initialFetchDone = useRef(false);
 
   const fetchAnalysis = useCallback(
     async (page = 1) => {
@@ -92,10 +93,19 @@ export default function useNewsAnalysis({
     [holdings, knownNewsIds, latestNewsTimestamp, profile],
   );
 
+  // Immediate initial fetch on mount (don't wait for polling)
+  useEffect(() => {
+    if (!initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchAnalysis(1);
+    }
+  }, [fetchAnalysis]);
+
+  // Continue polling after initial fetch
   usePollingTask(
     useCallback(() => fetchAnalysis(newsPage), [fetchAnalysis, newsPage]),
     30000,
-    true,
+    scanCount > 0, // Only start polling after first fetch completes
   );
 
   return {

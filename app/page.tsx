@@ -30,10 +30,15 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
+        // Prefetch dashboard while checking auth
+        router.prefetch("/dashboard");
+        
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const { user } = await res.json();
           if (user) {
+            // Warm up user data cache before navigating
+            fetch("/api/user/data", { cache: "no-store" }).catch(() => {});
             router.push("/dashboard");
             return;
           }

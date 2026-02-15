@@ -44,7 +44,10 @@ interface AnalyzeRequest {
 
 const NEWS_SYNC_INTERVAL_MS = 8000;
 const MAX_CACHE_SIZE = 500;
+const MAX_ANALYSIS_CACHE_SIZE = 200;
+const MAX_CONCURRENT_NIM_CALLS = 3; // Limit concurrent AI calls
 const articleCache = new Map<string, NewsArticle>();
+const analysisCache = new Map<string, NewsAnalysis>(); // Cache analysis results
 let orderedArticleIds: string[] = [];
 let lastNewsSyncAt = 0;
 
@@ -150,11 +153,41 @@ export async function GET(req: Request) {
       .map((id) => articleCache.get(id))
       .filter(Boolean) as NewsArticle[];
 
-    const analyses: NewsAnalysis[] = [];
+    // Check cache first, only analyze uncached articles
+    const cachedAnalyses: NewsAnalysis[] = [];
+    const uncachedArticles: NewsArticle[] = [];
+
     for (const article of pageArticles) {
-      const analysis = await analyzeArticle(article, riskProfile, holdingsMap);
-      analyses.push(analysis);
+      const cached = analysisCache.get(article.id);
+      if (cached) {
+        cachedAnalyses.push(cached);
+      } else {
+        uncachedArticles.push(article);
+      }
     }
+
+    // Analyze uncached articles with concurrency limit
+    const newAnalyses: NewsAnalysis[] = [];
+    for (let i = 0; i < uncachedArticles.length; i += MAX_CONCURRENT_NIM_CALLS) {
+      const batch = uncachedArticles.slice(i, i + MAX_CONCURRENT_NIM_CALLS);
+      const batchResults = await Promise.all(
+        batch.map((article) =>
+          analyzeArticle(article, riskProfile, holdingsMap),
+        ),
+      );
+      // Cache results
+      batchResults.forEach((analysis) => {
+        analysisCache.set(analysis.id, analysis);
+        // Trim cache if needed
+        if (analysisCache.size > MAX_ANALYSIS_CACHE_SIZE) {
+          const oldestKey = analysisCache.keys().next().value;
+          if (oldestKey) analysisCache.delete(oldestKey);
+        }
+      });
+      newAnalyses.push(...batchResults);
+    }
+
+    const analyses = [...cachedAnalyses, ...newAnalyses];
 
     // Sort by threat level descending
     analyses.sort((a, b) => b.threat_level - a.threat_level);
@@ -259,6 +292,10 @@ Task:
 Return ONLY valid JSON with this structure:
 {"headline":"SHORT HEADLINE","global_score":7,"portfolio_threat":8,"sentiment":"BEARISH","action":"SELL","reasoning":"REGULATORS ARE HUNTING YOUR STABLES.","summary":"LIQUIDITY CRUNCH IMMINENT.","affected_assets":["BTC","ETH"],"review_verdict":"DISAGREE","revised_sentiment":"BEARISH","review_confidence":82,"review_reasoning":"SOURCE SIGNAL UNDERESTIMATED REGULATORY DAMAGE."}`;
 
+      // Add timeout to prevent hanging NIM calls
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const res = await fetch(NIM_ENDPOINT, {
         method: "POST",
         headers: {
@@ -278,7 +315,10 @@ Return ONLY valid JSON with this structure:
           max_tokens: 400,
           stream: false,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();

@@ -9,6 +9,14 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+// In-memory cache for news
+let newsCache: {
+  data: TransformedArticle[] | null;
+  timestamp: number;
+  category: string;
+} = { data: null, timestamp: 0, category: "" };
+const NEWS_CACHE_TTL_MS = 60_000; // 1 minute cache
+
 // Response from the free crypto news API
 interface CryptoNewsApiArticle {
   title: string;
@@ -246,7 +254,23 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get("limit") || "20";
-    const category = searchParams.get("category"); // bitcoin, defi, breaking, etc.
+    const category = searchParams.get("category") || "all";
+
+    // Check in-memory cache first
+    const now = Date.now();
+    if (
+      newsCache.data &&
+      newsCache.category === category &&
+      now - newsCache.timestamp < NEWS_CACHE_TTL_MS
+    ) {
+      return NextResponse.json({
+        success: true,
+        articles: newsCache.data.slice(0, parseInt(limit)),
+        totalCount: newsCache.data.length,
+        fetchedAt: new Date(newsCache.timestamp).toISOString(),
+        source: "cryptocurrency.cv (cached)",
+      });
+    }
 
     // Build API URL
     let apiUrl = `https://cryptocurrency.cv/api/news?limit=${limit}`;
@@ -279,6 +303,13 @@ export async function GET(request: Request) {
 
     // Transform articles to our format
     const transformedArticles = data.articles.map(transformArticle);
+
+    // Update cache
+    newsCache = {
+      data: transformedArticles,
+      timestamp: Date.now(),
+      category,
+    };
 
     return NextResponse.json({
       success: true,

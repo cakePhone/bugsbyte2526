@@ -67,51 +67,51 @@ export async function fetchLiveNews(
   const knownIdSet = new Set((options.knownIds || []).map((id) => String(id)));
 
   const endpoints = buildNewsEndpoints();
-  const errors: Array<{ endpoint: string; error: unknown }> = [];
 
-  for (const endpoint of endpoints) {
-    try {
-      const url = endpoint.includes("cryptocurrency.cv")
-        ? `${endpoint}?page=${page}&perPage=${perPage}`
-        : endpoint;
+  // Race all endpoints in parallel - use the first successful response
+  const fetchPromises = endpoints.map(async (endpoint) => {
+    const url = endpoint.includes("cryptocurrency.cv")
+      ? `${endpoint}?page=${page}&perPage=${perPage}`
+      : endpoint;
 
-      const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store" });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(
-          `News API request failed (${res.status}): ${errorText.slice(0, 200)}`,
-        );
-      }
-
-      const data = await res.json();
-      const items = normalizeNewsPayload(data);
-
-      if (!items.length) {
-        throw new Error("News payload contained zero items");
-      }
-
-      const mapped = items.map((item) => mapNewsArticle(item, endpoint));
-      const filtered = mapped
-        .filter((article) => !knownIdSet.has(article.id))
-        .filter((article) => {
-          if (!latestMs || !Number.isFinite(latestMs)) return true;
-          const articleMs = new Date(article.timestamp).getTime();
-          return Number.isFinite(articleMs) && articleMs > latestMs;
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-        );
-
-      return filtered.slice(0, maxItems);
-    } catch (error) {
-      errors.push({ endpoint, error });
+    if (!res.ok) {
+      throw new Error(`News API request failed (${res.status})`);
     }
-  }
 
-  console.error("All news providers failed:", errors);
-  throw new Error("Unable to fetch live news");
+    const data = await res.json();
+    const items = normalizeNewsPayload(data);
+
+    if (!items.length) {
+      throw new Error("News payload contained zero items");
+    }
+
+    const mapped = items.map((item) => mapNewsArticle(item, endpoint));
+    const filtered = mapped
+      .filter((article) => !knownIdSet.has(article.id))
+      .filter((article) => {
+        if (!latestMs || !Number.isFinite(latestMs)) return true;
+        const articleMs = new Date(article.timestamp).getTime();
+        return Number.isFinite(articleMs) && articleMs > latestMs;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+
+    return filtered.slice(0, maxItems);
+  });
+
+  try {
+    // Use Promise.any to get the first successful response
+    const result = await Promise.any(fetchPromises);
+    return result;
+  } catch (error) {
+    // All endpoints failed
+    console.error("All news providers failed:", error);
+    throw new Error("Unable to fetch live news");
+  }
 }
 
 function normalizeNewsPayload(data: any): any[] {

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
-  getLatestQuotePrices,
+  getPricesForSymbols,
   type QuoteCurrency,
 } from "@/lib/marketSnapshots";
 import type { Prisma } from "@prisma/client";
@@ -28,7 +28,12 @@ export async function computeAndPersistWalletValuations(params: {
   assets: Record<string, number>;
 }) {
   const quoteCurrency = resolveQuoteCurrency(params.preferences);
-  const prices = await getLatestQuotePrices(quoteCurrency);
+  
+  // Only fetch prices for symbols the user actually holds (fast path)
+  const heldSymbols = Object.keys(params.assets).filter(
+    (symbol) => params.assets[symbol] > 0
+  );
+  const prices = await getPricesForSymbols(heldSymbols, quoteCurrency);
 
   const entries: WalletValuationEntry[] = Object.entries(params.assets)
     .filter(([, amount]) => amount > 0)
@@ -59,12 +64,13 @@ export async function computeAndPersistWalletValuations(params: {
     JSON.stringify(nextPreferences),
   ) as Prisma.InputJsonValue;
 
-  await prisma.user.update({
+  // Persist in background (non-blocking)
+  prisma.user.update({
     where: { id: params.userId },
     data: {
       preferences: serializedPreferences,
     },
-  });
+  }).catch(() => {});
 
   return {
     quoteCurrency,
