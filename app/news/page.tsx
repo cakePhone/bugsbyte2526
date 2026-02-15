@@ -12,29 +12,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import NewsBureau, { type NewsArticle } from "@/components/dashboard/NewsBureau";
 import WarRoomFooter from "@/components/dashboard/WarRoomFooter";
-<<<<<<< Updated upstream
 import { useLightweightAuth } from "@/app/dashboard/hooks/useLightweightAuth";
-=======
->>>>>>> Stashed changes
 import type { NewsAnalysisResponse } from "@/lib/nvidia-nim";
 
 type NewsCategory = "all" | "bitcoin" | "defi" | "breaking";
 
-// Simplified profile type - don't wait for full dashboard data
-interface SimpleProfile {
-  preferences?: { riskProfile?: string };
-}
-
 export default function NewsPage() {
   const router = useRouter();
-<<<<<<< Updated upstream
   const { holdings, profile, authChecked } = useLightweightAuth(router);
-=======
-  
-  // Local state for holdings and profile - loaded async, doesn't block news
-  const [holdings, setHoldings] = useState<Record<string, number>>({});
-  const [profile, setProfile] = useState<SimpleProfile>({});
->>>>>>> Stashed changes
 
   // News state
   const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -42,18 +27,6 @@ export default function NewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<NewsCategory>("all");
   const [lastUpdate, setLastUpdate] = useState<string>("");
-
-  // Load user data in background (non-blocking)
-  useEffect(() => {
-    fetch("/api/user/data", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.wallet?.holdings) {
-          setHoldings(data.wallet.holdings);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // Fetch news from API - starts immediately, doesn't wait for user data
   const fetchNews = useCallback(async (cat: NewsCategory) => {

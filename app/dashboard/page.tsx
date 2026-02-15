@@ -20,6 +20,7 @@ import IntelligenceExchangeBar, {
 import ArbitrageBulletin from "@/components/dashboard/ArbitrageBulletin";
 import TacticalPlanModal from "@/components/dashboard/TacticalPlanModal";
 import PriceAlertPanel from "@/components/dashboard/PriceAlertPanel";
+import HoldingsDonut from "@/components/dashboard/HoldingsDonut";
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
@@ -343,6 +344,9 @@ function WarRoomContent() {
             onPlanRequest={handlePlanRequest}
             onSellRequest={handleSellRequest}
           />
+        </div>
+        <div className="flex-shrink-0">
+          <HoldingsDonut holdingValues={holdingValuesUsdt} />
         </div>
         <div className="flex-shrink-0">
           <PriceAlertPanel />
