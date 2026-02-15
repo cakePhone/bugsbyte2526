@@ -96,7 +96,7 @@ Make sure you have the following installed:
 
 ### Quick Start
 
-```bash
+````bash
 # 1️⃣ Clone the repository
 git clone https://github.com/YOUR_USERNAME/geisha-gains.git
 
@@ -108,240 +108,80 @@ npm install
 
 # 4️⃣ Set up environment variables
 cp .env.example .env
-# Edit .env with your NVIDIA API key and database URL
+# Geisha Gains — War Room
 
-# 5️⃣ Initialize database
-npm run db:generate
-npm run db:push
+Lightweight project README focused on Docker usage and stack versions.
 
-# 6️⃣ Start the development server
-npm run dev
-```
+## Stack (actual versions in this repo)
 
-🎉 **That's it!** Open [http://localhost:3000](http://localhost:3000) to begin The Interrogation!
+- Next.js: 16.1.6
+- React: 18.3.1
+- TypeScript: 5.9.3
+- Prisma: 6.19.2
+- @prisma/client: 6.19.2
+- Tailwind CSS: 3.4.4
+- Node.js: recommended 20.x (development images use node:20-bookworm-slim)
+- PostgreSQL: 16 (docker image: postgres:16-alpine)
+- Docker & Docker Compose: used for local development and production container builds
 
-### Environment Variables
+## Docker-first Quick Start
 
-Create a `.env` file with:
+This repository supports a Dockerized development flow via `docker compose` and a multi-stage production build using the included `Dockerfile`.
 
-```env
-# Database (SQLite for quick start, PostgreSQL for production)
-DATABASE_URL="file:./dev.db"
-
-# NVIDIA NIM API (required for AI analysis)
-NVIDIA_NIM_ENDPOINT="https://integrate.api.nvidia.com/v1/chat/completions"
-NVIDIA_API_KEY="nvapi-YOUR-KEY-HERE"
-```
-
-### Build for Production
+1) Build & start services (development):
 
 ```bash
-# Create optimized production build
-npm run build
+docker compose up --build
+````
 
-# Start production server
-npm start
-```
+This will start the `postgres` database and the `web` service (Next dev server). The `web` service depends on `postgres` being healthy.
 
-### Database Management
+2. Open the app in your browser:
+
+http://localhost:3000
+
+3. Production image (build & run locally):
 
 ```bash
-# View database in browser
-npm run db:studio
+# Build production image
+docker build -t geisha-gains:prod .
 
-# Reset database (WARNING: Deletes all data)
-npx prisma migrate reset
+# Run the container (ensure you provide a proper .env with DATABASE_URL)
+docker run --env-file .env -p 3000:3000 geisha-gains:prod
 ```
+
+Notes:
+
+- The production image uses a multi-stage build to install dependencies, run the Next build, and serve via `next start` on port 3000.
+- If you rely on Prisma migrations in production, run migrations outside of the container or ensure your CI/CD runs them with the correct `DATABASE_URL`.
+
+## Useful commands
+
+- Install locally: `npm install`
+- Generate Prisma client: `npx prisma generate`
+- Open Prisma Studio: `npm run db:studio`
+- Start dev server (local): `npm run dev`
+- Build & start production (local): `npm run build && npm start`
+
+## Docker files
+
+- `Dockerfile.dev` — development image used by `docker compose` (already present)
+- `Dockerfile` — production multi-stage Dockerfile (created in this change)
+
+## Where to look next
+
+- App code: `app/`
+- API routes: `app/api/`
+- Prisma schema: `prisma/schema.prisma`
 
 ---
 
-## 🧗‍♂️ Project Structure
+If you'd like, I can also:
 
-```
-geisha-gains/
-├── 📁 app/
-│   ├── 📁 api/
-│   │   └── 📁 news/
-│   │       └── 📁 analyze/
-│   │           └── route.ts          # NVIDIA NIM news analysis endpoint
-│   ├── 📁 components/
-│   │   ├── 📁 dashboard/
-│   │   │   ├── ActionOverlay.tsx     # Lethal alert overlays
-│   │   │   ├── TheBulletin.tsx       # News feed with threat colors
-│   │   │   └── ThreatRadar.tsx       # 4-axis risk visualization
-│   │   └── 📁 onboarding/
-│   │       └── TheInterrogation.tsx  # Terminal-style profiling
-│   ├── 📁 dashboard/
-│   │   └── page.tsx                  # War Room dashboard
-│   ├── error.tsx                     # Error boundary component
-│   ├── global-error.tsx              # Global error handler
-│   ├── globals.css                   # Brutalist styling
-│   ├── layout.tsx                    # Root layout
-│   └── page.tsx                      # Home (onboarding flow)
-├── 📁 lib/
-│   └── newsService.ts                # Live news API integration
-├── 📁 prisma/
-│   └── schema.prisma                 # Database schema
+- add a `.dockerignore` tuned for Next builds
+- add a small `Makefile` with common tasks (`dev`, `build`, `docker-build`)
+
+---
+
+© Geisha Gains
 ├── 📁 public/
-│   └── 📁 assets/
-│       └── 📁 logo1.ico              # App favicon
-├── components.json                   # shadcn/ui config
-├── jsconfig.json                     # JavaScript configuration
-├── next.config.js                    # Next.js configuration
-├── package.json                      # Dependencies & scripts
-├── postcss.config.js                 # PostCSS configuration
-├── tailwind.config.js                # Tailwind CSS configuration
-├── SETUP_GUIDE.md                    # Detailed setup instructions
-└── README.md                         # You are here! 📍
-```
-
----
-
-## 🎯 How It Works
-
-### The Intelligence Loop
-
-1. **The Interrogation** — Terminal-style onboarding captures trading psychology
-2. **Risk Profiling** — Stores profile in localStorage with 4 key dimensions:
-   - Risk Tolerance (CONSERVATIVE/MODERATE/AGGRESSIVE)
-   - Investment Horizon (SCALP/SWING/POSITION)
-   - Focus Sectors (CRYPTO/STOCKS/FOREX/COMMODITIES)
-   - Geopolitical Sensitivity (IGNORE/AWARE/PARANOID)
-
-3. **News Intelligence** — Fetches crypto news from live news API
-4. **AI Analysis** — NVIDIA NIM Llama-3 70B analyzes news against user profile
-5. **War Room Dashboard** — Real-time threat assessment and action alerts
-
-### Key Components
-
-- **TheBulletin**: Vertical news feed with threat-colored borders
-- **ThreatRadar**: 4-axis SVG radar (Volatility, Geopolitics, Sentiment, Exposure)
-- **ActionOverlay**: Fixed-position lethal alerts with QUICK SELL buttons
-- **News Analysis API**: Returns global_score, portfolio_threat, sentiment, action, reasoning
-
----
-
-## 🛣 Roadmap
-
-- [x] � Brutalist dark theme with red accents
-- [x] 👤 Terminal-style user profiling (The Interrogation)
-- [x] 🤖 NVIDIA NIM Llama-3 70B integration
-- [x] 📰 Live news API ingestion
-- [x] 📊 War Room dashboard with multi-panel display
-- [x] 🎯 Threat Radar 4-axis visualization
-- [x] ⚡ Action Overlay lethal alerts
-- [x] ☕ Coffee Driven Development branding
-- [x] 🔄 Intelligence loop with continuous analysis
-- [x] 📱 Fully responsive design
-- [x] 🎨 Framer Motion animations
-- [x] 🗄️ Prisma ORM with PostgreSQL/SQLite
-- [ ] 🌙 Dark/Light mode toggle
-- [ ] 📈 Real trading integration (Uphold API)
-- [ ] 🔄 WebSocket real-time updates
-- [ ] 📊 Advanced analytics dashboard
-- [ ] 🎫 Portfolio export functionality
-
----
-
-## 🤝 Contributing
-
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**!
-
-### How to Contribute
-
-1. **Fork the Project**
-
-   ```bash
-   # Click the 'Fork' button at the top right of this page
-   ```
-
-2. **Clone your Fork**
-
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/geisha-gains.git
-   ```
-
-3. **Create a Feature Branch**
-
-   ```bash
-   git checkout -b feature/AmazingFeature
-   ```
-
-4. **Make your Changes**
-
-   ```bash
-   # Code your amazing feature
-   ```
-
-5. **Commit your Changes**
-
-   ```bash
-   git commit -m "Add: AmazingFeature"
-   ```
-
-6. **Push to the Branch**
-
-   ```bash
-   git push origin feature/AmazingFeature
-   ```
-
-7. **Open a Pull Request**
-   ```bash
-   # Go to your fork on GitHub and click 'New Pull Request'
-   ```
-
-### Contribution Guidelines
-
-- 📝 Write clear, concise commit messages
-- 🧪 Test your changes thoroughly
-- 📖 Update documentation if needed
-- 🎨 Follow the existing brutalist code style
-
----
-
-## ⭐ Support This Project
-
-<div align="center">
-
-If you found this project helpful or inspiring, please consider giving it a ⭐!
-
-Your support helps the project grow and motivates continued development.
-
-[![Star this repo](https://img.shields.io/badge/⭐_Star_This_Repo-yellow?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/geisha-gains)
-[![Fork this repo](https://img.shields.io/badge/🍴_Fork_This_Repo-blue?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/geisha-gains/fork)
-
-**Every star counts! Thank you for your support! 🙏**
-
-</div>
-
----
-
-## 📝 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-```
-MIT License
-
-Copyright (c) 2026 Geisha Gains
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software...
-```
-
----
-
-<div align="center">
-
-### 🏯 Built with ☕ by Coffee Driven Development
-
-**Geisha Gains** — Where Intelligence Meets the Markets 🏯💹
-
-[![Made with Next.js](https://img.shields.io/badge/Made_with-Next.js-000000?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Powered by NVIDIA NIM](https://img.shields.io/badge/Powered_by-NVIDIA_NIM-76B900?style=flat-square&logo=nvidia)](https://build.nvidia.com/)
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=flat-square&logo=vercel)](https://vercel.com/)
-
-</div>
