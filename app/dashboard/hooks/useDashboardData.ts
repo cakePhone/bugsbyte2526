@@ -128,118 +128,22 @@ export default function useDashboardData(router: AppRouterInstance) {
     setHoldingValuesDisplay(displayValues);
   }, []);
 
-  // Parallel initial load: auth + user data + coins in one go
   useEffect(() => {
     (async () => {
       try {
-        // Check session storage for cached auth (instant check)
-        const cachedAuth = sessionStorage.getItem("geisha_auth_checked");
-        if (cachedAuth === "true") {
-          // Skip auth check if recently validated - render immediately
-          setAuthChecked(true);
-          
-          // Still fetch coins and user data in background
-          fetch("/api/coins?limit=25", { cache: "no-store" })
-            .then((res) => res.ok ? res.json() : null)
-            .then((data) => {
-              if (data?.coins) {
-                const symbols = data.coins
-                  .map((coin: { symbol?: string }) =>
-                    String(coin.symbol || "").toUpperCase(),
-                  )
-                  .filter(Boolean);
-                if (symbols.length > 0) {
-                  const ordered = [
-                    ...DEFAULT_CHART_COINS,
-                    ...symbols.filter(
-                      (s) =>
-                        !DEFAULT_CHART_COINS.includes(
-                          s as (typeof DEFAULT_CHART_COINS)[number],
-                        ),
-                    ),
-                  ];
-                  const unique = Array.from(new Set(ordered));
-                  setAvailableCoins(unique);
-                }
-              }
-            })
-            .catch(() => {});
-          
-          loadUserData();
-          
-          // Verify auth is still valid in background
-          fetch("/api/auth/me")
-            .then((res) => {
-              if (!res.ok) {
-                sessionStorage.removeItem("geisha_auth_checked");
-                router.push("/");
-              }
-            })
-            .catch(() => {});
-          
-          return;
-        }
-
-        // Full auth check for first load
-        const [authRes, coinsRes] = await Promise.all([
-          fetch("/api/auth/me"),
-          fetch("/api/coins?limit=25", { cache: "no-store" }),
-        ]);
-
-        // Check auth first
-        if (!authRes.ok) {
-          sessionStorage.removeItem("geisha_auth_checked");
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
           router.push("/");
           return;
         }
-        const { user } = await authRes.json();
+        const { user } = await res.json();
         if (!user) {
-          sessionStorage.removeItem("geisha_auth_checked");
           router.push("/");
           return;
         }
 
-        // Cache auth status for instant subsequent loads
-        sessionStorage.setItem("geisha_auth_checked", "true");
-
-        // Set authChecked immediately after auth confirmed - don't wait for data
+        await loadUserData();
         setAuthChecked(true);
-
-        // Process coins response (non-blocking)
-        if (coinsRes.ok) {
-          try {
-            const data = await coinsRes.json();
-            const symbols = Array.isArray(data?.coins)
-              ? data.coins
-                  .map((coin: { symbol?: string }) =>
-                    String(coin.symbol || "").toUpperCase(),
-                  )
-                  .filter(Boolean)
-              : [];
-            if (symbols.length > 0) {
-              const ordered = [
-                ...DEFAULT_CHART_COINS,
-                ...symbols.filter(
-                  (s) =>
-                    !DEFAULT_CHART_COINS.includes(
-                      s as (typeof DEFAULT_CHART_COINS)[number],
-                    ),
-                ),
-              ];
-              const unique = Array.from(new Set(ordered));
-              setAvailableCoins(unique);
-              setSelectedChartSymbols((prev) => {
-                const next = prev.filter((symbol) => unique.includes(symbol));
-                return next.length > 0 ? next : unique.slice(0, 2);
-              });
-            }
-          } catch {
-            // keep defaults
-          }
-        }
-
-        // Load user data in background (non-blocking for UI)
-        loadUserData();
       } catch {
         router.push("/");
       }
@@ -251,6 +155,43 @@ export default function useDashboardData(router: AppRouterInstance) {
     5000,
     authChecked,
   );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/coins?limit=25", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const symbols = Array.isArray(data?.coins)
+          ? data.coins
+              .map((coin: { symbol?: string }) =>
+                String(coin.symbol || "").toUpperCase(),
+              )
+              .filter(Boolean)
+          : [];
+        if (symbols.length === 0) return;
+
+        const ordered = [
+          ...DEFAULT_CHART_COINS,
+          ...symbols.filter(
+            (s) =>
+              !DEFAULT_CHART_COINS.includes(
+                s as (typeof DEFAULT_CHART_COINS)[number],
+              ),
+          ),
+        ];
+
+        const unique = Array.from(new Set(ordered));
+        setAvailableCoins(unique);
+        setSelectedChartSymbols((prev) => {
+          const next = prev.filter((symbol) => unique.includes(symbol));
+          return next.length > 0 ? next : unique.slice(0, 2);
+        });
+      } catch {
+        // keep defaults
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     ensureSymbols(

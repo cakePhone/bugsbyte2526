@@ -28,7 +28,7 @@ export default function NewsPage() {
   const [category, setCategory] = useState<NewsCategory>("all");
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
-  // Fetch news from API - starts immediately, doesn't wait for user data
+  // Fetch news from API
   const fetchNews = useCallback(async (cat: NewsCategory) => {
     try {
       setLoading(true);
