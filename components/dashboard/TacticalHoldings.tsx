@@ -44,17 +44,11 @@ export default function TacticalHoldings({
 }: TacticalHoldingsProps) {
   const { state, soloAsset, setBuyMode } = useWarRoom();
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
-  const [planningAsset, setPlanningAsset] = useState<string | null>(null);
   const [sellModal, setSellModal] = useState<{
     isOpen: boolean;
     symbol: string;
     maxAmount: number;
   }>({ isOpen: false, symbol: "", maxAmount: 0 });
-  const [planResult, setPlanResult] = useState<{
-    symbol: string;
-    verdict: string;
-    confidence: number;
-  } | null>(null);
   const trayRef = useRef<HTMLDivElement>(null);
 
   const entries = Object.entries(holdings).filter(([, amt]) => amt > 0);
@@ -118,54 +112,8 @@ export default function TacticalHoldings({
     onSellRequest?.(symbol, amount);
   };
 
-  // Handle PLAN action (NIM AI Analysis)
-  const handlePlan = async (sym: string) => {
-    setPlanningAsset(sym);
-    setPlanResult(null);
-
-    try {
-      const currentPrice = prices[sym] || 0;
-      const change24h = priceChanges24h[sym] || 0;
-
-      const res = await fetch("/api/nim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "evaluate-asset",
-          symbol: sym,
-          currentPrice,
-          percentChange24h: change24h,
-          riskProfile: "MODERATE",
-        }),
-      });
-
-      if (res.ok) {
-        const evaluation = await res.json();
-        const verdict =
-          evaluation.action === "BUY"
-            ? "BULLISH"
-            : evaluation.action === "SELL"
-              ? "BEARISH"
-              : "STABLE";
-        setPlanResult({
-          symbol: sym,
-          verdict,
-          confidence: evaluation.confidence || 70,
-          ...evaluation,
-        });
-      } else {
-        throw new Error("API call failed");
-      }
-    } catch {
-      // Fallback to mock
-      const verdicts = ["BULLISH", "BEARISH", "STABLE"] as const;
-      const verdict = verdicts[Math.floor(Math.random() * 3)];
-      const confidence = 60 + Math.floor(Math.random() * 35);
-      setPlanResult({ symbol: sym, verdict, confidence });
-    } finally {
-      setPlanningAsset(null);
-    }
-
+  // Handle PLAN action — open Tactical Plan Modal
+  const handlePlan = (sym: string) => {
     onPlanRequest?.(sym);
   };
 
@@ -382,46 +330,11 @@ export default function TacticalHoldings({
                             </button>
                             <button
                               onClick={() => handlePlan(sym)}
-                              disabled={planningAsset === sym}
-                              className="flex-1 px-4 py-3 font-black font-mono text-xs uppercase tracking-widest hover:bg-[#00D4FF] transition-colors disabled:opacity-50"
+                              className="flex-1 px-4 py-3 font-black font-mono text-xs uppercase tracking-widest hover:bg-[#00D4FF] transition-colors"
                             >
-                              {planningAsset === sym
-                                ? "ANALYZING..."
-                                : "[ PLAN ]"}
+                              [ PLAN ]
                             </button>
                           </div>
-
-                          {/* NIM AI Evaluation Report */}
-                          <AnimatePresence>
-                            {planResult && planResult.symbol === sym && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="border-t-4 border-black px-4 py-3 bg-black text-white"
-                              >
-                                <div className="text-[8px] font-mono text-gray-500 uppercase tracking-widest mb-2">
-                                  NIM AI EVALUATION REPORT
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`text-lg font-black font-mono ${
-                                      planResult.verdict === "BULLISH"
-                                        ? "text-[#00FF88]"
-                                        : planResult.verdict === "BEARISH"
-                                          ? "text-[#FF3B3B]"
-                                          : "text-[#FFD93D]"
-                                    }`}
-                                  >
-                                    {planResult.verdict}
-                                  </span>
-                                  <span className="text-xs font-mono text-gray-400">
-                                    CONFIDENCE: {planResult.confidence}%
-                                  </span>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                       </motion.div>
                     )}

@@ -104,7 +104,6 @@ function useGlobalAssetCatalog() {
             "AAVE",
             "CRV",
             "COMP",
-            "MKR",
             "SHIB",
             "ALGO",
             "FTM",

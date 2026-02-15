@@ -18,6 +18,7 @@ import IntelligenceExchangeBar, {
   generateMockExchangeQuotes,
 } from "@/components/dashboard/IntelligenceExchangeBar";
 import ArbitrageBulletin from "@/components/dashboard/ArbitrageBulletin";
+import TacticalPlanModal from "@/components/dashboard/TacticalPlanModal";
 import { useWarRoom, type TimeWindow } from "@/contexts/WarRoomContext";
 import type { ChartTimeframe } from "@/components/dashboard/types";
 import useDashboardData from "./hooks/useDashboardData";
@@ -68,7 +69,6 @@ const SUPPORTED_CHART_SYMBOLS = new Set([
   "ENJ",
   "CRV",
   "COMP",
-  "MKR",
   "SNX",
   "SUSHI",
   "YFI",
@@ -112,6 +112,16 @@ function WarRoomContent() {
     profile,
     holdings,
   });
+
+  // Tactical Plan Modal state
+  const [planModal, setPlanModal] = useState<{
+    isOpen: boolean;
+    symbol: string;
+  }>({ isOpen: false, symbol: "" });
+
+  const handlePlanRequest = (symbol: string) => {
+    setPlanModal({ isOpen: true, symbol });
+  };
 
   // Trade execution handlers
   const [isExecutingTrade, setIsExecutingTrade] = useState(false);
@@ -329,6 +339,7 @@ function WarRoomContent() {
             currency={displayCurrency}
             threatenedSymbols={threatenedSymbols}
             priceChanges24h={{}}
+            onPlanRequest={handlePlanRequest}
             onSellRequest={handleSellRequest}
           />
         </div>
@@ -367,6 +378,18 @@ function WarRoomContent() {
           onExecuteTrade={handleBuyRequest}
         />
       </div>
+
+      {/* Tactical Plan Modal */}
+      <TacticalPlanModal
+        isOpen={planModal.isOpen}
+        symbol={planModal.symbol}
+        currentPrice={prices[planModal.symbol] || 0}
+        change24h={0}
+        onClose={() => setPlanModal({ isOpen: false, symbol: "" })}
+        onExecute={(sym, verdict) => {
+          console.log(`[EXECUTE_STRATEGY] ${sym} — ${verdict}`);
+        }}
+      />
     </div>
   );
 }
