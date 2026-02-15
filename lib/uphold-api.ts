@@ -48,7 +48,7 @@ export async function fetchUpholdPrice(symbol: string): Promise<MarketPrice> {
 }
 
 /**
- * Fetch all supported crypto prices with concurrency limit
+ * Fetch all supported crypto prices
  */
 export async function fetchAllPrices(
   symbols: string[],
@@ -59,19 +59,8 @@ export async function fetchAllPrices(
 
   if (normalized.length === 0) return [];
 
-  // Process in batches of 10 concurrent requests to avoid overwhelming the API
-  const BATCH_SIZE = 10;
-  const results: MarketPrice[] = [];
-
-  for (let i = 0; i < normalized.length; i += BATCH_SIZE) {
-    const batch = normalized.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(
-      batch.map((symbol) => fetchUpholdPrice(symbol)),
-    );
-    results.push(...batchResults);
-  }
-
-  return results;
+  const promises = normalized.map((symbol) => fetchUpholdPrice(symbol));
+  return Promise.all(promises);
 }
 
 /**

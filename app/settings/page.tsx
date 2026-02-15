@@ -210,7 +210,6 @@ export default function BaseOfOperations() {
   const handleLogout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     localStorage.removeItem("geisha_risk_profile");
-    sessionStorage.removeItem("geisha_auth_checked"); // Clear auth cache
     router.push("/");
   }, [router]);
 
@@ -243,7 +242,6 @@ export default function BaseOfOperations() {
       
       // Logout current user first
       await fetch("/api/auth/logout", { method: "POST" });
-      sessionStorage.removeItem("geisha_auth_checked"); // Clear auth cache
       
       // Login with new account
       const res = await fetch("/api/auth/login", {
@@ -286,7 +284,6 @@ export default function BaseOfOperations() {
     // Log out current user and redirect to home page for registration
     await fetch("/api/auth/logout", { method: "POST" });
     localStorage.removeItem("geisha_risk_profile");
-    sessionStorage.removeItem("geisha_auth_checked"); // Clear auth cache
     router.push("/");
   };
 
