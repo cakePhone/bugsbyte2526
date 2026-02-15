@@ -9,6 +9,13 @@ import type {
 } from "@/components/dashboard/types";
 import usePollingTask from "./usePollingTask";
 
+// Delay between fetching each symbol to avoid rate limiting
+const FETCH_DELAY_MS = 5000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const CHART_TIMEFRAMES: ChartTimeframeOption[] = [
   { key: "1M", label: "1m", days: 1 },
   { key: "5M", label: "5m", days: 1 },
@@ -253,11 +260,17 @@ export default function useChartHistory({
 
       if (showLoading) setChartLoading(true);
       try {
-        await Promise.all(
-          stableSelectedSymbols.map((symbol) =>
-            fetchHistory(symbol, activeTimeframe, forceRefresh),
-          ),
-        );
+        // Process symbols sequentially with 5-second delay between each
+        for (let i = 0; i < stableSelectedSymbols.length; i++) {
+          const symbol = stableSelectedSymbols[i];
+          
+          // Add delay before each fetch (except the first one)
+          if (i > 0) {
+            await delay(FETCH_DELAY_MS);
+          }
+          
+          await fetchHistory(symbol, activeTimeframe, forceRefresh);
+        }
       } finally {
         if (showLoading) setChartLoading(false);
       }

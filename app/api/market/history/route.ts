@@ -40,6 +40,13 @@ const TIMEFRAME_ALIASES: Record<string, keyof typeof TIMEFRAME_TO_WINDOW_MS> = {
 
 const DEFAULT_SYMBOLS = ["BTC", "ETH", "XRP"];
 
+// Delay between each symbol fetch to avoid rate limiting
+const FETCH_DELAY_MS = 5000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type QuoteCurrency = "USD" | "EUR";
 
 function normalizeTimeframe(
@@ -103,38 +110,32 @@ export async function POST(req: Request) {
           ? supported
           : DEFAULT_SYMBOLS;
 
-    const settled = await Promise.allSettled(
-      safeSymbols.map((symbol) => fetchAndPersistSymbol(symbol)),
-    );
+    // Process symbols sequentially with 5-second delay between each
+    const inserted: Array<{ symbol: string; price: number; timestamp: number }> = [];
+    const failed: Array<{ symbol: string; error: string }> = [];
 
-    const inserted = settled
-      .map((result, index) => ({ result, symbol: safeSymbols[index] }))
-      .filter((item) => item.result.status === "fulfilled")
-      .map((item) => {
-        const snap = (
-          item.result as PromiseFulfilledResult<{
-            symbol: string;
-            price: number;
-            timestamp: Date;
-          }>
-        ).value;
-        return {
+    for (let i = 0; i < safeSymbols.length; i++) {
+      const symbol = safeSymbols[i];
+      
+      // Add delay before each fetch (except the first one)
+      if (i > 0) {
+        await delay(FETCH_DELAY_MS);
+      }
+
+      try {
+        const snap = await fetchAndPersistSymbol(symbol);
+        inserted.push({
           symbol: snap.symbol,
           price: snap.price,
           timestamp: snap.timestamp.getTime(),
-        };
-      });
-
-    const failed = settled
-      .map((result, index) => ({ result, symbol: symbols[index] }))
-      .filter((item) => item.result.status === "rejected")
-      .map((item) => ({
-        symbol: item.symbol,
-        error:
-          item.result.status === "rejected"
-            ? String(item.result.reason)
-            : "Unknown error",
-      }));
+        });
+      } catch (error) {
+        failed.push({
+          symbol,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     return NextResponse.json({
       inserted,

@@ -17,6 +17,13 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// Delay between fetches to avoid rate limiting
+const FETCH_DELAY_MS = 5000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function GET(req: Request) {
   const start = Date.now();
   
@@ -114,17 +121,24 @@ export async function POST(req: Request) {
     if (action === "charts" && symbols.length > 0) {
       const params = getYFParams(timeframe);
       const results: Record<string, unknown> = {};
+      const limitedSymbols = symbols.slice(0, 10);
       
-      await Promise.all(
-        symbols.slice(0, 10).map(async (symbol: string) => {
-          const points = await getChartData(symbol, params.interval, params.range);
-          results[symbol] = {
-            points: points.map(p => ({ timestamp: p.timestamp, price: p.close })),
-            count: points.length,
-            success: points.length > 0,
-          };
-        })
-      );
+      // Process symbols sequentially with 5-second delay between each
+      for (let i = 0; i < limitedSymbols.length; i++) {
+        const symbol = limitedSymbols[i];
+        
+        // Add delay before each fetch (except the first one)
+        if (i > 0) {
+          await delay(FETCH_DELAY_MS);
+        }
+        
+        const points = await getChartData(symbol, params.interval, params.range);
+        results[symbol] = {
+          points: points.map(p => ({ timestamp: p.timestamp, price: p.close })),
+          count: points.length,
+          success: points.length > 0,
+        };
+      }
 
       return NextResponse.json({
         results,

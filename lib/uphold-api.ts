@@ -7,6 +7,13 @@
 
 import { getQuote } from "@/lib/yahoofinance";
 
+// Delay between fetches to avoid rate limiting
+const FETCH_DELAY_MS = 5000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface UpholdTicker {
   ask: string;
   bid: string;
@@ -59,8 +66,21 @@ export async function fetchAllPrices(
 
   if (normalized.length === 0) return [];
 
-  const promises = normalized.map((symbol) => fetchUpholdPrice(symbol));
-  return Promise.all(promises);
+  // Process symbols sequentially with 5-second delay between each
+  const results: MarketPrice[] = [];
+  for (let i = 0; i < normalized.length; i++) {
+    const symbol = normalized[i];
+    
+    // Add delay before each fetch (except the first one)
+    if (i > 0) {
+      await delay(FETCH_DELAY_MS);
+    }
+    
+    const price = await fetchUpholdPrice(symbol);
+    results.push(price);
+  }
+  
+  return results;
 }
 
 /**
